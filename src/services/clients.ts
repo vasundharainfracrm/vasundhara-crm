@@ -1,0 +1,123 @@
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  Timestamp,
+  updateDoc,
+  where,
+  type Unsubscribe,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import type { AppUser, Client, ClientFormValues } from "@/types";
+import { normalizePhone } from "@/lib/utils";
+import { writeAuditLog } from "@/services/audit";
+
+export function toTimestamp(dateValue?: string | null) {
+  return dateValue ? Timestamp.fromDate(new Date(`${dateValue}T00:00:00`)) : null;
+}
+
+function payloadFromForm(values: ClientFormValues) {
+  return {
+    ...values,
+    primaryMobile: normalizePhone(values.primaryMobile),
+    alternateMobile: normalizePhone(values.alternateMobile || ""),
+    budget: Number(values.budget || 0),
+    followUpDate: toTimestamp(values.followUpDate),
+  };
+}
+
+export async function checkDuplicateClient(values: Pick<ClientFormValues, "primaryMobile" | "alternateMobile" | "email">) {
+  const response = await fetch("/api/clients/check-duplicate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      primaryMobile: normalizePhone(values.primaryMobile),
+      alternateMobile: normalizePhone(values.alternateMobile || ""),
+      email: values.email,
+    }),
+  });
+
+  if (!response.ok) throw new Error("Unable to check duplicates.");
+  return (await response.json()) as { isDuplicate: boolean; ownerName?: string };
+}
+
+export async function createClient(values: ClientFormValues, user: AppUser) {
+  const docRef = await addDoc(collection(db, "clients"), {
+    ...payloadFromForm(values),
+    assignedUserId: user.uid,
+    assignedUserName: user.fullName,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  await updateDoc(docRef, { clientId: docRef.id });
+  await writeAuditLog({
+    action: "client_created",
+    performedBy: user.uid,
+    performedByName: user.fullName,
+    targetId: docRef.id,
+    details: `Created client ${values.fullName}`,
+  });
+
+  return docRef.id;
+}
+
+export async function updateClient(clientId: string, values: ClientFormValues, user: AppUser) {
+  await updateDoc(doc(db, "clients", clientId), {
+    ...payloadFromForm(values),
+    updatedAt: serverTimestamp(),
+  });
+
+  await writeAuditLog({
+    action: "client_updated",
+    performedBy: user.uid,
+    performedByName: user.fullName,
+    targetId: clientId,
+    details: `Updated client ${values.fullName}`,
+  });
+}
+
+export async function deleteClient(clientId: string, clientName: string, user: AppUser) {
+  await updateDoc(doc(db, "clients", clientId), {
+    deletedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  await writeAuditLog({
+    action: "client_deleted",
+    performedBy: user.uid,
+    performedByName: user.fullName,
+    targetId: clientId,
+    details: `Deleted client ${clientName}`,
+  });
+}
+
+
+export async function getClient(clientId: string) {
+  const snap = await getDoc(doc(db, "clients", clientId));
+  if (!snap.exists()) return null;
+  return { clientId: snap.id, ...snap.data() } as Client;
+}
+
+export function subscribeClients(user: AppUser, limitCount: number, callback: (clients: Client[]) => void): Unsubscribe {
+  const constraints =
+    user.role === "admin" || user.role === "super_admin"
+      ? [orderBy("createdAt", "desc"), limit(limitCount)]
+      : [where("assignedUserId", "==", user.uid), orderBy("createdAt", "desc"), limit(limitCount)];
+
+  return onSnapshot(query(collection(db, "clients"), ...constraints), (snapshot) => {
+    callback(snapshot.docs.map((item) => ({ clientId: item.id, ...item.data() }) as Client));
+  });
+}
+
+export function subscribeClient(clientId: string, callback: (client: Client | null) => void): Unsubscribe {
+  return onSnapshot(doc(db, "clients", clientId), (snapshot) => {
+    callback(snapshot.exists() ? ({ clientId: snapshot.id, ...snapshot.data() } as Client) : null);
+  });
+}

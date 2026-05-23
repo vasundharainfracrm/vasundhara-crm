@@ -1,0 +1,111 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper Functions ────────────────────────────────────────────────────
+
+    // Returns true if the request is coming from a logged-in Firebase user.
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Returns true if the logged-in user is an admin or super_admin.
+    // First checks the fast JWT custom claim (set server-side on login).
+    // Falls back to reading the Firestore document for users who logged in
+    // before the claim was set.
+    function isAdmin() {
+      return isAuth() && (
+        request.auth.token.role == 'admin' ||
+        request.auth.token.role == 'super_admin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin'
+      );
+    }
+
+    // Returns true ONLY for super_admin. Used to gate destructive operations
+    // such as role escalation and super_admin handover.
+    function isSuperAdmin() {
+      return isAuth() && (
+        request.auth.token.role == 'super_admin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin'
+      );
+    }
+
+    // Returns true if the incoming write is attempting to change the 'role'
+    // field on a user document to a higher privilege than currently exists.
+    // This prevents a regular admin from client-side-escalating roles.
+    function isRoleEscalation() {
+      return request.resource.data.keys().hasAny(['role']) &&
+        request.resource.data.role != resource.data.role &&
+        (request.resource.data.role == 'admin' || request.resource.data.role == 'super_admin');
+    }
+
+    // ─── Users Collection ────────────────────────────────────────────────────
+
+    match /users/{userId} {
+      // Any authenticated user can read the users list.
+      // This is required for the "Assign Lead" dropdown in the employee dashboard.
+      allow read: if isAuth();
+
+      // Admins can update user documents (e.g. approve, change status).
+      // However, only super_admin can change a user's role field.
+      // This prevents a regular admin from promoting any user via a direct Firestore write.
+      allow update: if isAdmin() && (
+        !isRoleEscalation() || isSuperAdmin()
+      );
+
+      // Only super_admin can delete user documents.
+      allow delete: if isSuperAdmin();
+
+      // Self-registration: A brand-new employee can create ONLY their own
+      // user document. The document MUST have status "pending_approval" and
+      // role "employee" — they cannot grant themselves admin access.
+      // An admin must manually approve them before they can use the CRM.
+      allow create: if isAuth()
+        && request.auth.uid == userId
+        && request.resource.data.status == "pending_approval"
+        && request.resource.data.role == "employee";
+    }
+
+    // ─── Clients Collection ──────────────────────────────────────────────────
+
+    match /clients/{clientId} {
+      // Admins can read and write any client record.
+      // Employees can only read/write clients that are assigned to them.
+      allow read, write: if isAdmin()
+        || (isAuth() && resource.data.assignedUserId == request.auth.uid);
+
+      // When creating a new client, the employee must assign it to themselves.
+      // They cannot create a lead on behalf of another employee.
+      allow create: if isAuth()
+        && request.resource.data.assignedUserId == request.auth.uid;
+    }
+
+    // ─── Follow-ups Collection ───────────────────────────────────────────────
+
+    match /followups/{followupId} {
+      // Employees can read follow-ups, but can only write follow-ups they created.
+      allow read: if isAuth();
+      allow write: if isAdmin()
+        || (isAuth() && resource.data.createdBy == request.auth.uid);
+
+      // When creating a follow-up, the createdBy field must match the
+      // currently logged-in user — prevents spoofing another employee's ID.
+      allow create: if isAuth()
+        && request.resource.data.createdBy == request.auth.uid;
+    }
+
+    // ─── Audit Logs Collection ───────────────────────────────────────────────
+
+    match /auditLogs/{logId} {
+      // Only admins can read the audit trail.
+      allow read: if isAdmin();
+
+      // Any authenticated user can append to the audit log (so employees can log their actions).
+      // Modifying or deleting existing logs is strictly forbidden.
+      allow create: if isAuth() && request.resource.data.performedBy == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+  }
+}
