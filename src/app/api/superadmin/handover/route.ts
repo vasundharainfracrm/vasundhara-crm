@@ -46,6 +46,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Target admin must be active." }, { status: 400 });
     }
 
+    // Guard: ensure there is exactly one super_admin before proceeding
+    const superAdminCountSnap = await adminDb
+      .collection("users")
+      .where("role", "==", "super_admin")
+      .get();
+    if (superAdminCountSnap.size !== 1) {
+      return NextResponse.json(
+        { error: "System integrity error: expected exactly one Super Admin account. Contact support." },
+        { status: 500 },
+      );
+    }
+
     const now = Timestamp.now();
 
     // Atomic Firestore batch: swap roles
@@ -72,6 +84,7 @@ export async function POST(req: Request) {
       targetId: newSuperAdminUid,
       details: `Super Admin transferred to ${targetData.fullName ?? newSuperAdminUid}`,
       timestamp: now,
+      expireAt: Timestamp.fromDate(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)),
     });
 
     // Audit log — incoming
@@ -83,6 +96,7 @@ export async function POST(req: Request) {
       targetId: newSuperAdminUid,
       details: `${targetData.fullName ?? newSuperAdminUid} received Super Admin privileges from ${superAdmin.fullName}`,
       timestamp: now,
+      expireAt: Timestamp.fromDate(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)),
     });
 
     await batch.commit();
@@ -91,8 +105,11 @@ export async function POST(req: Request) {
     await adminAuth.setCustomUserClaims(newSuperAdminUid, { role: "super_admin" });
     await adminAuth.setCustomUserClaims(superAdmin.uid, { role: "admin" });
 
-    // Force logout the old super admin — their refresh tokens are now invalid
+    // Force logout BOTH accounts:
+    //  - Old super admin: their role is now demoted to admin
+    //  - New super admin: they need a fresh session to pick up the new super_admin claim
     await adminAuth.revokeRefreshTokens(superAdmin.uid);
+    await adminAuth.revokeRefreshTokens(newSuperAdminUid);
 
     return NextResponse.json({ ok: true });
   } catch (error) {

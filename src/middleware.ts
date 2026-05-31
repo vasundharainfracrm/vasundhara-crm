@@ -3,6 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 /**
  * Decode a Firebase session cookie JWT payload without crypto.
  * Returns null if the token is malformed or expired.
+ *
+ * NOTE: Login pages (/login, /admin/login, /signup) are intentionally always
+ * accessible even when a session cookie exists. This allows multiple accounts
+ * to be signed in simultaneously across different browser tabs.
+ * Post-login routing is handled by window.location.href in the page components.
  */
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
@@ -53,14 +58,10 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // ── Authenticated users on auth pages ─────────────────────────────────
-  if (isAdminAuthPage && effectiveAdminSession) {
-    return NextResponse.redirect(new URL("/admin", request.url));
-  }
-
-  if (isUserAuthPage && effectiveUserSession) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
+  // ── Auth pages are always reachable ──────────────────────────────────
+  // No redirect-away for authenticated users — navigating to /login or
+  // /admin/login always renders the form so users can sign in to a
+  // different account in a new tab while other sessions remain active.
 
   // ── Root redirect ──────────────────────────────────────────────────────
   if (pathname === "/") {

@@ -60,6 +60,16 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
+  
+  /* Map Shadcn tokens to our theme */
+  --color-popover: var(--background);
+  --color-popover-foreground: var(--foreground);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-foreground);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--foreground);
+  --color-ring: var(--accent);
+
   --radius-lg: var(--radius);
   --font-sans: "Geist", Arial, Helvetica, sans-serif;
   --color-chart-1: var(--chart-1);

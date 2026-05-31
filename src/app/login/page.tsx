@@ -76,12 +76,12 @@ export default function LoginPage() {
             Create account
           </Link>
         </span>
-        <Link
+        <a
           className="mt-2 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
           href="/admin/login"
         >
           Admin portal →
-        </Link>
+        </a>
       </div>
     </AuthShell>
   );

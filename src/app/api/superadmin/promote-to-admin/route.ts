@@ -59,6 +59,7 @@ export async function POST(req: Request) {
       targetId: targetUid,
       details: `Promoted ${targetData.fullName ?? targetUid} from employee to admin`,
       timestamp: Timestamp.now(),
+      expireAt: Timestamp.fromDate(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)),
     });
 
     return NextResponse.json({ ok: true });

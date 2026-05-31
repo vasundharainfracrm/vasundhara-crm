@@ -1,20 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { KeyRound } from "lucide-react";
-import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TopBar } from "@/components/layout/TopBar";
+import { SetPasswordModal } from "@/components/admin/SetPasswordModal";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
+import type { AppUser } from "@/types";
 
 export default function EmployeesPage() {
   const { employees } = useEmployees();
   const { user } = useAuth();
+
+  const [passwordTarget, setPasswordTarget] = useState<AppUser | null>(null);
 
   const isSuperAdmin = user?.role === "super_admin";
 
@@ -24,21 +28,6 @@ export default function EmployeesPage() {
   const visibleEmployees = isSuperAdmin
     ? employees
     : employees.filter((e) => e.role === "employee");
-
-  async function resetPassword(email: string, uid: string) {
-    const response = await fetch("/api/admin/reset-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, userId: uid }),
-    });
-    const payload = await response.json();
-    if (!response.ok) {
-      toast.error(payload.error || "Unable to generate reset link.");
-      return;
-    }
-    await navigator.clipboard.writeText(payload.link);
-    toast.success("Reset link copied to clipboard.");
-  }
 
   return (
     <>
@@ -103,12 +92,12 @@ export default function EmployeesPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="space-x-2 text-right">
-                        {/* Password reset — super_admin only */}
-                        {isSuperAdmin && (
+                        {/* Password override — super_admin only, not shown on own account */}
+                        {isSuperAdmin && employee.role !== "super_admin" && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => resetPassword(employee.email, employee.uid)}
+                            onClick={() => setPasswordTarget(employee)}
                           >
                             <KeyRound className="h-4 w-4" />
                             Reset
@@ -129,6 +118,18 @@ export default function EmployeesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Set Password Modal — super_admin only */}
+      {passwordTarget && (
+        <SetPasswordModal
+          targetUid={passwordTarget.uid}
+          targetName={passwordTarget.fullName}
+          open={Boolean(passwordTarget)}
+          onOpenChange={(open) => {
+            if (!open) setPasswordTarget(null);
+          }}
+        />
+      )}
     </>
   );
 }

@@ -38,6 +38,7 @@ export async function POST(req: Request) {
       targetId: decoded.uid,
       details: `User logged in (role: ${role})`,
       timestamp: Timestamp.now(),
+      expireAt: Timestamp.fromDate(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)),
     });
 
     const response = NextResponse.json({ ok: true, role });

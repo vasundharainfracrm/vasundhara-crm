@@ -10,8 +10,12 @@ type AuditInput = {
 };
 
 export async function writeAuditLog(input: AuditInput) {
+  const expireDate = new Date();
+  expireDate.setDate(expireDate.getDate() + 90);
+
   await addDoc(collection(db, "auditLogs"), {
     ...input,
     timestamp: serverTimestamp(),
+    expireAt: expireDate,
   });
 }

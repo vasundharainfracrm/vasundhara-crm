@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import { DuplicateWarningModal } from "@/components/clients/DuplicateWarningModal";
 import { useAuth } from "@/lib/auth-context";
 import { clientSchema } from "@/lib/validation";
@@ -47,6 +48,7 @@ export function ClientForm({ client }: { client?: Client }) {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<ClientFormValues>({
@@ -182,7 +184,13 @@ export function ClientForm({ client }: { client?: Client }) {
               </Select>
             </Field>
             <Field label="Follow-up date" error={errors.followUpDate?.message}>
-              <Input type="date" {...register("followUpDate")} />
+              <Controller
+                control={control}
+                name="followUpDate"
+                render={({ field }) => (
+                  <DatePicker value={field.value} onChange={field.onChange} />
+                )}
+              />
             </Field>
             <div className="md:col-span-2">
               <Field label="Notes" error={errors.notes?.message}>

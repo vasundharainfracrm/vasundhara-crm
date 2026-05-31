@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import type { ComponentType } from "react";
-import { BarChart3, BriefcaseBusiness, ChevronLeft, ChevronRight, ClipboardList, Home, LogOut, ScrollText, Settings, Shield, Users } from "lucide-react";
+import { BarChart3, BriefcaseBusiness, ChevronLeft, ChevronRight, ClipboardList, Home, LogOut, ScrollText, Settings, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -56,9 +56,6 @@ export function Sidebar({ mode }: { mode: "employee" | "admin" }) {
         <div className="flex items-center justify-between mb-4">
           {!isCollapsed && (
             <Link href={mode === "admin" ? "/admin" : "/dashboard"} className="flex items-center gap-3 rounded-lg px-2 flex-1 min-w-0">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-                <Shield className="h-4 w-4" />
-              </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="truncate text-sm font-semibold">Vasundhra CRM</p>
@@ -68,8 +65,8 @@ export function Sidebar({ mode }: { mode: "employee" | "admin" }) {
             </Link>
           )}
           {isCollapsed && (
-            <Link href={mode === "admin" ? "/admin" : "/dashboard"} className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-accent-foreground" title="Vasundhra CRM">
-              <Shield className="h-4 w-4" />
+            <Link href={mode === "admin" ? "/admin" : "/dashboard"} className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-accent-foreground font-bold" title="Vasundhra CRM">
+              V
             </Link>
           )}
           <Button

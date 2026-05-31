@@ -10,7 +10,7 @@ import { LeadSourceChart } from "@/components/reports/LeadSourceChart";
 import { PriorityTrendChart } from "@/components/reports/PriorityTrendChart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useClients } from "@/hooks/useClients";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuth } from "@/lib/auth-context";
@@ -61,10 +61,10 @@ export default function ReportsPage() {
           <CardContent>
             <div className="flex flex-wrap items-end gap-4">
               <Field label="From">
-                <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-44" />
+                <DatePicker value={from} onChange={setFrom} placeholder="Start Date" className="w-44" />
               </Field>
               <Field label="To">
-                <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-44" />
+                <DatePicker value={to} onChange={setTo} placeholder="End Date" className="w-44" />
               </Field>
               {(from || to) && (
                 <button

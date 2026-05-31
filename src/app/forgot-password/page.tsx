@@ -1,72 +1,55 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
+import { PhoneCall, ShieldAlert } from "lucide-react";
 import { AuthShell } from "@/components/auth/AuthShell";
-import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { useAuth } from "@/lib/auth-context";
 
 export default function ForgotPasswordPage() {
-  const { sendReset } = useAuth();
-  const [email, setEmail] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [sent, setSent] = useState(false);
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSubmitting(true);
-    try {
-      await sendReset(email);
-      setSent(true);
-      toast.success("Password reset email sent.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to send reset email.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   return (
     <AuthShell>
-      <h2 className="auth-form-title">Reset password</h2>
+      <h2 className="auth-form-title">Forgot password?</h2>
       <p className="auth-form-desc">
-        Enter your email and we&apos;ll send a reset link.
+        Password resets for this system are managed by your administrator.
       </p>
 
-      {sent ? (
-        <div
-          style={{
-            borderRadius: 10,
-            border: "1px solid rgba(16,185,129,0.3)",
-            background: "rgba(16,185,129,0.07)",
-            padding: "1rem 1.125rem",
-            color: "var(--accent)",
-            fontSize: "0.875rem",
-            lineHeight: 1.6,
-          }}
-        >
-          ✓ Check your inbox — a reset link has been sent to <strong>{email}</strong>.
+      <div
+        style={{
+          borderRadius: 10,
+          border: "1px solid rgba(245,158,11,0.35)",
+          background: "rgba(245,158,11,0.07)",
+          padding: "1rem 1.125rem",
+          display: "flex",
+          gap: "0.75rem",
+          alignItems: "flex-start",
+        }}
+      >
+        <ShieldAlert
+          style={{ color: "var(--warning, #f59e0b)", flexShrink: 0, marginTop: 2 }}
+          size={18}
+        />
+        <div style={{ fontSize: "0.875rem", lineHeight: 1.6, color: "var(--foreground)" }}>
+          <strong>Contact your Super Admin</strong> to have your password reset. They can assign
+          you a new temporary password so you can log back in.
+          <br />
+          <span style={{ color: "var(--muted-foreground)", fontSize: "0.8125rem" }}>
+            Once you log in, you can change your password from your profile settings.
+          </span>
         </div>
-      ) : (
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <Field label="Email">
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              placeholder="you@example.com"
-            />
-          </Field>
-          <Button className="w-full" type="submit" disabled={submitting}>
-            {submitting ? "Sending…" : "Send reset link"}
-          </Button>
-        </form>
-      )}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.5rem",
+          fontSize: "0.8125rem",
+          color: "var(--muted-foreground)",
+          marginTop: "0.25rem",
+        }}
+      >
+        <PhoneCall size={14} />
+        <span>Reach out via your organisation's internal contact.</span>
+      </div>
 
       <div className="auth-divider" />
 

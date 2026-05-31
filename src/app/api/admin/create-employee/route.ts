@@ -41,6 +41,7 @@ export async function POST(req: Request) {
       targetId: authUser.uid,
       details: `Created employee ${values.fullName}`,
       timestamp: Timestamp.now(),
+      expireAt: Timestamp.fromDate(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)),
     });
 
     return NextResponse.json({ uid: authUser.uid });

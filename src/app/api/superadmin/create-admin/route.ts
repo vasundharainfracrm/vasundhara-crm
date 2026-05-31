@@ -12,6 +12,15 @@ export async function POST(req: Request) {
 
   try {
     const values = (await req.json()) as AdminFormValues;
+
+    // Guard: super_admin role cannot be set directly — use the handover flow instead.
+    if ((values as { role?: string }).role === "super_admin") {
+      return NextResponse.json(
+        { error: "Super Admin role cannot be assigned directly. Use the Super Admin handover flow." },
+        { status: 400 },
+      );
+    }
+
     const authUser = await adminAuth.createUser({
       email: values.email,
       password: values.password || Math.random().toString(36).slice(2, 12),
@@ -42,6 +51,7 @@ export async function POST(req: Request) {
       targetId: authUser.uid,
       details: `Created admin ${values.fullName}`,
       timestamp: Timestamp.now(),
+      expireAt: Timestamp.fromDate(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)),
     });
 
     return NextResponse.json({ uid: authUser.uid });

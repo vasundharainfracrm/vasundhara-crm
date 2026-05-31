@@ -9,6 +9,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn, formatCurrency } from "@/lib/utils";
 import { exportClientsCSV } from "@/lib/export";
@@ -229,11 +230,11 @@ export function ClientTable({
               {/* Follow-up date range */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">Follow-up From</label>
-                <Input type="date" value={filters.followUpFrom} onChange={(e) => setFollowUpFrom(e.target.value)} />
+                <DatePicker value={filters.followUpFrom} onChange={setFollowUpFrom} placeholder="Select Date" />
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">Follow-up To</label>
-                <Input type="date" value={filters.followUpTo} onChange={(e) => setFollowUpTo(e.target.value)} />
+                <DatePicker value={filters.followUpTo} onChange={setFollowUpTo} placeholder="Select Date" />
               </div>
             </div>
           )}

@@ -81,12 +81,12 @@ export default function AdminLoginPage() {
         <Link className="hover:text-foreground transition-colors" href="/forgot-password">
           Forgot your password?
         </Link>
-        <Link
+        <a
           className="mt-2 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
           href="/login"
         >
           ← Back to Employee login
-        </Link>
+        </a>
       </div>
     </AuthShell>
   );
