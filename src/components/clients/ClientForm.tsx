@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -35,11 +35,28 @@ function clientDefaults(client?: Client): ClientFormValues {
     leadStatus: client?.leadStatus || "new_lead",
     priority: client?.priority || "medium",
     notes: client?.notes || "",
-    followUpDate: client?.followUpDate?.toDate ? client.followUpDate.toDate().toISOString().slice(0, 10) : "",
+    followUpDate: client?.followUpDate?.toDate
+      ? client.followUpDate.toDate().toISOString().slice(0, 10)
+      : "",
   };
 }
 
-export function ClientForm({ client }: { client?: Client }) {
+type ClientFormProps = {
+  client?: Client;
+  /**
+   * When true the form renders without its own submit/cancel buttons.
+   * The parent controls submission via the returned `submitRef`.
+   * Dirty state is reported via `onDirtyChange`.
+   */
+  inline?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Attach this ref to trigger form submission from outside */
+  submitRef?: React.RefObject<(() => void) | null>;
+  /** Attach this ref to trigger form reset (discard) from outside */
+  resetRef?: React.RefObject<(() => void) | null>;
+};
+
+export function ClientForm({ client, inline = false, onDirtyChange, submitRef, resetRef }: ClientFormProps) {
   const { user } = useAuth();
   const router = useRouter();
   const [duplicateOwner, setDuplicateOwner] = useState<string>();
@@ -50,11 +67,27 @@ export function ClientForm({ client }: { client?: Client }) {
     register,
     control,
     handleSubmit,
-    formState: { errors },
+    reset,
+    formState: { errors, isDirty },
   } = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
     defaultValues: clientDefaults(client),
   });
+
+  // Report dirty state to parent
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  // Re-seed form when client data changes from Firestore (real-time updates)
+  // but only if the form is currently pristine so we don't stomp in-progress edits
+  const prevClientRef = useRef<Client | undefined>(client);
+  useEffect(() => {
+    if (client && prevClientRef.current !== client && !isDirty) {
+      reset(clientDefaults(client));
+      prevClientRef.current = client;
+    }
+  }, [client, isDirty, reset]);
 
   async function onSubmit(values: ClientFormValues) {
     if (!user) return;
@@ -72,7 +105,15 @@ export function ClientForm({ client }: { client?: Client }) {
       } else if (client) {
         await updateClient(client.clientId, values, user);
         toast.success("Client updated.");
-        router.push(user.role === "admin" ? `/admin/clients/${client.clientId}` : `/dashboard/clients/${client.clientId}`);
+        // Reset dirty state after successful save
+        reset(values);
+        if (!inline) {
+          router.push(
+            user.role === "admin"
+              ? `/admin/clients/${client.clientId}`
+              : `/dashboard/clients/${client.clientId}`,
+          );
+        }
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to save client.");
@@ -81,9 +122,19 @@ export function ClientForm({ client }: { client?: Client }) {
     }
   }
 
+  // Expose submit trigger to parent via ref
+  useEffect(() => {
+    if (submitRef) {
+      submitRef.current = handleSubmit(onSubmit);
+    }
+    if (resetRef) {
+      resetRef.current = () => reset(clientDefaults(client));
+    }
+  });
+
   return (
     <>
-      <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+      <form id="client-form" className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
         <Card>
           <CardHeader>
             <CardTitle>Basic Info</CardTitle>
@@ -125,7 +176,7 @@ export function ClientForm({ client }: { client?: Client }) {
                 <option>Commercial</option>
               </Select>
             </Field>
-            <Field label="Budget" error={errors.budget?.message}>
+            <Field label="Budget (₹)" error={errors.budget?.message}>
               <Input type="number" min={0} {...register("budget")} />
             </Field>
             <Field label="Preferred location" error={errors.preferredLocation?.message}>
@@ -192,7 +243,7 @@ export function ClientForm({ client }: { client?: Client }) {
                 )}
               />
             </Field>
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 min-w-0">
               <Field label="Notes" error={errors.notes?.message}>
                 <Textarea {...register("notes")} />
               </Field>
@@ -200,17 +251,24 @@ export function ClientForm({ client }: { client?: Client }) {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-3">
-          <Button type="button" variant="secondary" onClick={() => router.back()}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting ? "Saving..." : isEdit ? "Save changes" : "Add client"}
-          </Button>
-        </div>
+        {/* Only render own buttons when NOT in inline (embedded) mode */}
+        {!inline && (
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => router.back()}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Saving..." : isEdit ? "Save changes" : "Add client"}
+            </Button>
+          </div>
+        )}
       </form>
 
-      <DuplicateWarningModal open={Boolean(duplicateOwner)} ownerName={duplicateOwner} onClose={() => setDuplicateOwner(undefined)} />
+      <DuplicateWarningModal
+        open={Boolean(duplicateOwner)}
+        ownerName={duplicateOwner}
+        onClose={() => setDuplicateOwner(undefined)}
+      />
     </>
   );
 }

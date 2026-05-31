@@ -1,24 +1,22 @@
 "use client";
 
 import { format } from "date-fns";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Edit, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Save, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ClientForm } from "@/components/clients/ClientForm";
 import { FollowUpForm } from "@/components/clients/FollowUpForm";
 import { TopBar } from "@/components/layout/TopBar";
 import { PageBreadcrumb } from "@/components/layout/PageBreadcrumb";
 import { useClientFollowUps } from "@/hooks/useFollowUps";
-import { cn, formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { deleteClient, subscribeClient } from "@/services/clients";
-import { leadStatusLabels, priorityLabels, type Client } from "@/types";
+import { leadStatusLabels, type Client } from "@/types";
 
 export default function ClientDetailPage() {
   const params = useParams<{ clientId: string }>();
@@ -27,9 +25,32 @@ export default function ClientDetailPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
   const followUps = useClientFollowUps(params.clientId);
 
+  // Ref that ClientForm will populate with its submit function
+  const submitRef = useRef<(() => void) | null>(null);
+  // Ref that ClientForm will populate with its reset function
+  const resetRef = useRef<(() => void) | null>(null);
+
   useEffect(() => subscribeClient(params.clientId, setClient), [params.clientId]);
+
+  const handleDirtyChange = useCallback((dirty: boolean) => setIsDirty(dirty), []);
+
+  async function handleSave() {
+    if (!submitRef.current) return;
+    setSaving(true);
+    try {
+      await submitRef.current();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleDiscard() {
+    resetRef.current?.();
+  }
 
   async function handleDelete() {
     if (!client || !user) return;
@@ -61,53 +82,98 @@ export default function ClientDetailPage() {
 
   return (
     <>
-      <TopBar title={client.fullName} description={`${client.city} · ${client.primaryMobile}`} mode="employee" backHref="/dashboard/clients" />
+      <TopBar
+        title={client.fullName}
+        description={`${client.city} · ${client.primaryMobile}`}
+        mode="employee"
+        backHref="/dashboard/clients"
+      />
       <PageBreadcrumb
         crumbs={[
           { label: "My Clients", href: "/dashboard/clients" },
           { label: client.fullName },
         ]}
       />
+
       <div className="space-y-5 p-4 lg:p-8">
-        <div className="flex justify-end gap-2">
+        {/* ── Sticky action bar ──────────────────────────────── */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(true)}>
             <Trash2 className="h-4 w-4 text-danger" />
             Delete
           </Button>
-          <Link href={`/dashboard/clients/${client.clientId}/edit`} className={cn(buttonVariants({ variant: "secondary" }))}>
-            <Edit className="h-4 w-4" />
-            Edit
-          </Link>
+
+          {isDirty && (
+            <div className="flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/5 px-3 py-1.5">
+              <span className="text-xs font-medium text-accent">Unsaved changes</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDiscard}
+                disabled={saving}
+                className="h-7 px-2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+                Discard
+              </Button>
+              <Button size="sm" onClick={handleSave} disabled={saving} className="h-7">
+                <Save className="h-3.5 w-3.5" />
+                {saving ? "Saving…" : "Save changes"}
+              </Button>
+            </div>
+          )}
         </div>
+
+        {/* ── Full inline form ───────────────────────────────── */}
+        <ClientForm
+          client={client}
+          inline
+          onDirtyChange={handleDirtyChange}
+          submitRef={submitRef}
+          resetRef={resetRef}
+        />
+
+        {/* ── Follow-up panel ────────────────────────────────── */}
         <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
           <Card>
             <CardHeader>
-              <CardTitle>Client Profile</CardTitle>
+              <CardTitle>Follow-up History</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <Info label="Primary mobile" value={client.primaryMobile} />
-              <Info label="Email" value={client.email || "-"} />
-              <Info label="Address" value={client.address} />
-              <Info label="Property" value={`${client.propertyType} · ${client.bhkRequirement}`} />
-              <Info label="Budget" value={formatCurrency(client.budget)} />
-              <Info label="Preferred location" value={client.preferredLocation} />
-              <Info label="Lead source" value={client.leadSource} />
-              <Info label="Owner" value={client.assignedUserName} />
-              <div>
-                <p className="text-xs text-muted-foreground">Status</p>
-                <Badge className="mt-1" variant="secondary">{leadStatusLabels[client.leadStatus]}</Badge>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Priority</p>
-                <Badge className="mt-1" variant={client.priority === "high" ? "danger" : client.priority === "medium" ? "warning" : "secondary"}>
-                  {priorityLabels[client.priority]}
-                </Badge>
-              </div>
-              <div className="md:col-span-2">
-                <Info label="Notes" value={client.notes || "-"} />
-              </div>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Note</TableHead>
+                    <TableHead>Created By</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {followUps.map((item) => (
+                    <TableRow key={item.followupId}>
+                      <TableCell>
+                        {item.nextFollowUpDate?.toDate
+                          ? format(item.nextFollowUpDate.toDate(), "dd MMM yyyy")
+                          : "-"}
+                      </TableCell>
+                      <TableCell>{leadStatusLabels[item.status]}</TableCell>
+                      <TableCell>{item.note}</TableCell>
+                      <TableCell>{item.createdByName}</TableCell>
+                    </TableRow>
+                  ))}
+                  {!followUps.length ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                        No follow-ups added yet.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Add Follow-up</CardTitle>
@@ -117,44 +183,9 @@ export default function ClientDetailPage() {
             </CardContent>
           </Card>
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Follow-up History</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Note</TableHead>
-                  <TableHead>Created By</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {followUps.map((item) => (
-                  <TableRow key={item.followupId}>
-                    <TableCell>{item.nextFollowUpDate?.toDate ? format(item.nextFollowUpDate.toDate(), "dd MMM yyyy") : "-"}</TableCell>
-                    <TableCell>{leadStatusLabels[item.status]}</TableCell>
-                    <TableCell>{item.note}</TableCell>
-                    <TableCell>{item.createdByName}</TableCell>
-                  </TableRow>
-                ))}
-                {!followUps.length ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
-                      No follow-ups added yet.
-                    </TableCell>
-                  </TableRow>
-                ) : null}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Delete confirmation dialog */}
+      {/* Delete confirmation */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
           <DialogHeader>
@@ -174,14 +205,5 @@ export default function ClientDetailPage() {
         </DialogContent>
       </Dialog>
     </>
-  );
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-medium">{value}</p>
-    </div>
   );
 }

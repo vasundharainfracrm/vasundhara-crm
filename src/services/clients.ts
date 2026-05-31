@@ -98,6 +98,29 @@ export async function deleteClient(clientId: string, clientName: string, user: A
   });
 }
 
+/** Patch a small subset of client fields directly from the detail page. */
+export async function patchClient(
+  clientId: string,
+  patch: { leadStatus?: string; priority?: string; followUpDate?: string | null },
+  clientName: string,
+  user: AppUser,
+) {
+  const data: Record<string, unknown> = { updatedAt: serverTimestamp() };
+  if (patch.leadStatus !== undefined) data.leadStatus = patch.leadStatus;
+  if (patch.priority !== undefined) data.priority = patch.priority;
+  if (patch.followUpDate !== undefined) data.followUpDate = toTimestamp(patch.followUpDate ?? "");
+
+  await updateDoc(doc(db, "clients", clientId), data);
+
+  await writeAuditLog({
+    action: "client_updated",
+    performedBy: user.uid,
+    performedByName: user.fullName,
+    targetId: clientId,
+    details: `Quick-updated ${clientName}: ${Object.keys(patch).join(", ")}`,
+  });
+}
+
 
 export async function getClient(clientId: string) {
   const snap = await getDoc(doc(db, "clients", clientId));

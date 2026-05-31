@@ -51,6 +51,8 @@ type ClientTableProps = {
   resetFilters: () => void;
   loadMore?: () => void;
   hasMore?: boolean;
+  /** When true, only the filter bar is rendered (used inside the Kanban layout) */
+  kanbanMode?: boolean;
 };
 
 export function ClientTable({
@@ -71,6 +73,7 @@ export function ClientTable({
   resetFilters,
   loadMore,
   hasMore,
+  kanbanMode = false,
 }: ClientTableProps) {
   const [sortAsc, setSortAsc] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -241,81 +244,83 @@ export function ClientTable({
         </div>
       </CardHeader>
 
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Mobile</TableHead>
-              <TableHead>City</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Priority</TableHead>
-              <TableHead>
-                <Button variant="ghost" size="sm" onClick={() => setSortAsc((v) => !v)}>
-                  Follow-up
-                  <ArrowUpDown className="h-3 w-3" />
-                </Button>
-              </TableHead>
-              {isAdmin ? <TableHead>Owner</TableHead> : null}
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedClients.map((client) => (
-              <TableRow key={client.clientId}>
-                <TableCell>
-                  <div>
-                    <p className="font-medium">{client.fullName}</p>
-                    <p className="text-xs text-muted-foreground">{formatCurrency(client.budget)}</p>
-                  </div>
-                </TableCell>
-                <TableCell>{client.primaryMobile}</TableCell>
-                <TableCell>{client.city}</TableCell>
-                <TableCell>
-                  <Badge variant={statusVariant(client.leadStatus)}>{leadStatusLabels[client.leadStatus]}</Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      client.priority === "high" ? "danger" : client.priority === "medium" ? "warning" : "secondary"
-                    }
-                  >
-                    {priorityLabels[client.priority]}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {client.followUpDate?.toDate ? format(client.followUpDate.toDate(), "dd MMM yyyy") : "-"}
-                </TableCell>
-                {isAdmin ? <TableCell>{client.assignedUserName}</TableCell> : null}
-                <TableCell className="text-right">
-                  <Link
-                    href={`${basePath}/${client.clientId}`}
-                    className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-                  >
-                    <Eye className="h-4 w-4" />
-                    View
-                  </Link>
-                </TableCell>
-              </TableRow>
-            ))}
-            {!sortedClients.length ? (
+      {!kanbanMode && (
+        <CardContent>
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={isAdmin ? 8 : 7} className="py-10 text-center text-muted-foreground">
-                  No clients match the current filters.
-                </TableCell>
+                <TableHead>Name</TableHead>
+                <TableHead>Mobile</TableHead>
+                <TableHead>City</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>
+                  <Button variant="ghost" size="sm" onClick={() => setSortAsc((v) => !v)}>
+                    Follow-up
+                    <ArrowUpDown className="h-3 w-3" />
+                  </Button>
+                </TableHead>
+                {isAdmin ? <TableHead>Owner</TableHead> : null}
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {sortedClients.map((client) => (
+                <TableRow key={client.clientId}>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{client.fullName}</p>
+                      <p className="text-xs text-muted-foreground">{formatCurrency(client.budget)}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell>{client.primaryMobile}</TableCell>
+                  <TableCell>{client.city}</TableCell>
+                  <TableCell>
+                    <Badge variant={statusVariant(client.leadStatus)}>{leadStatusLabels[client.leadStatus]}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        client.priority === "high" ? "danger" : client.priority === "medium" ? "warning" : "secondary"
+                      }
+                    >
+                      {priorityLabels[client.priority]}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {client.followUpDate?.toDate ? format(client.followUpDate.toDate(), "dd MMM yyyy") : "-"}
+                  </TableCell>
+                  {isAdmin ? <TableCell>{client.assignedUserName}</TableCell> : null}
+                  <TableCell className="text-right">
+                    <Link
+                      href={`${basePath}/${client.clientId}`}
+                      className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+                    >
+                      <Eye className="h-4 w-4" />
+                      View
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {!sortedClients.length ? (
+                <TableRow>
+                  <TableCell colSpan={isAdmin ? 8 : 7} className="py-10 text-center text-muted-foreground">
+                    No clients match the current filters.
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
 
-        {hasMore && loadMore && (
-          <div className="mt-4 flex justify-center">
-            <Button variant="secondary" size="sm" onClick={loadMore}>
-              Load More Clients
-            </Button>
-          </div>
-        )}
-      </CardContent>
+          {hasMore && loadMore && (
+            <div className="mt-4 flex justify-center">
+              <Button variant="secondary" size="sm" onClick={loadMore}>
+                Load More Clients
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      )}
     </Card>
   );
 }

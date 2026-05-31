@@ -15,9 +15,6 @@ export function AuthShell({ children }: { children: ReactNode }) {
         <div className="auth-panel-inner">
           {/* Logo */}
           <div className="auth-logo">
-            <div className="auth-logo-icon">
-              <Building2 className="h-7 w-7" />
-            </div>
             <div>
               <p className="auth-logo-name">Vasundhra CRM</p>
               <p className="auth-logo-sub">Real estate lead control</p>
@@ -42,9 +39,6 @@ export function AuthShell({ children }: { children: ReactNode }) {
       <div className="auth-form-panel">
         {/* Mobile logo (shown only on small screens) */}
         <div className="auth-mobile-logo">
-          <div className="auth-logo-icon">
-            <Building2 className="h-5 w-5" />
-          </div>
           <p className="auth-logo-name">Vasundhra CRM</p>
         </div>
 

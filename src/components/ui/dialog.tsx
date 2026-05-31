@@ -35,6 +35,12 @@ type DialogProps = {
 };
 
 export function Dialog({ open, onOpenChange, title, description, children, footer }: DialogProps) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   React.useEffect(() => {
     if (!open) return;
     const handler = (event: KeyboardEvent) => {
@@ -44,10 +50,10 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
     return () => window.removeEventListener("keydown", handler);
   }, [onOpenChange, open]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+  const dialogContent = (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <button className="absolute inset-0 cursor-default" aria-label="Close dialog" onClick={() => onOpenChange(false)} />
       <div className={cn("relative w-full max-w-md rounded-lg border bg-surface shadow-2xl")}>
         {title ? (
@@ -72,4 +78,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
       </div>
     </div>
   );
+  
+  const { createPortal } = require("react-dom");
+  return createPortal(dialogContent, document.body);
 }
