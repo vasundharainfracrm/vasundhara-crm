@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 
-import { AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { AuthShell } from "@/components/auth/AuthShell";

@@ -18,7 +18,7 @@ type TopBarProps = {
   backHref?: string;
 };
 
-export function TopBar({ title, description, mode, ctaHref, ctaLabel, backHref }: TopBarProps) {
+export function TopBar({ title, mode, ctaHref, ctaLabel, backHref }: TopBarProps) {
   const router = useRouter();
 
   return (

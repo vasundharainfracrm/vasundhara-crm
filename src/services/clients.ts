@@ -47,11 +47,16 @@ export async function checkDuplicateClient(values: Pick<ClientFormValues, "prima
   return (await response.json()) as { isDuplicate: boolean; ownerName?: string };
 }
 
-export async function createClient(values: ClientFormValues, user: AppUser) {
+export async function createClient(
+  values: ClientFormValues,
+  user: AppUser,
+  assignedTo?: { uid: string; fullName: string },
+) {
+  const assignee = assignedTo ?? { uid: user.uid, fullName: user.fullName };
   const docRef = await addDoc(collection(db, "clients"), {
     ...payloadFromForm(values),
-    assignedUserId: user.uid,
-    assignedUserName: user.fullName,
+    assignedUserId: assignee.uid,
+    assignedUserName: assignee.fullName,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });

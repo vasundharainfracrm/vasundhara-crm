@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
         }}
       >
         <PhoneCall size={14} />
-        <span>Reach out via your organisation's internal contact.</span>
+        <span>Reach out via your organisation&apos;s internal contact.</span>
       </div>
 
       <div className="auth-divider" />

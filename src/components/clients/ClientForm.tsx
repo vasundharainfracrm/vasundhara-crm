@@ -54,9 +54,17 @@ type ClientFormProps = {
   submitRef?: React.RefObject<(() => void) | null>;
   /** Attach this ref to trigger form reset (discard) from outside */
   resetRef?: React.RefObject<(() => void) | null>;
+  /**
+   * When provided the client is assigned to this user instead of the
+   * currently logged-in user. Used by the admin "Add client" flow so
+   * admins can keep the client or assign it to an employee.
+   */
+  assignedTo?: { uid: string; fullName: string };
+  /** When true, successful create redirects to /admin/clients/{id} */
+  adminMode?: boolean;
 };
 
-export function ClientForm({ client, inline = false, onDirtyChange, submitRef, resetRef }: ClientFormProps) {
+export function ClientForm({ client, inline = false, onDirtyChange, submitRef, resetRef, assignedTo, adminMode = false }: ClientFormProps) {
   const { user } = useAuth();
   const router = useRouter();
   const [duplicateOwner, setDuplicateOwner] = useState<string>();
@@ -99,9 +107,9 @@ export function ClientForm({ client, inline = false, onDirtyChange, submitRef, r
           setDuplicateOwner(duplicate.ownerName);
           return;
         }
-        const id = await createClient(values, user);
+        const id = await createClient(values, user, assignedTo);
         toast.success("Client created.");
-        router.push(`/dashboard/clients/${id}`);
+        router.push(adminMode ? `/admin/clients/${id}` : `/dashboard/clients/${id}`);
       } else if (client) {
         await updateClient(client.clientId, values, user);
         toast.success("Client updated.");

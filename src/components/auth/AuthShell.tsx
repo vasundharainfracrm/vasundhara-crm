@@ -1,6 +1,5 @@
 "use client";
 
-import { Building2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 export function AuthShell({ children }: { children: ReactNode }) {

@@ -68,8 +68,8 @@ export function DeleteEmployeeDialog({ open, onOpenChange, targetUid, targetName
       toast.success("Employee deleted successfully");
       onOpenChange(false);
       onSuccess();
-    } catch (err: any) {
-      toast.error(err.message || "Unable to delete employee");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Unable to delete employee");
     } finally {
       setIsDeleting(false);
     }

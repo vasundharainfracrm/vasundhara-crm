@@ -5,7 +5,6 @@ import { LayoutGrid, Table2 } from "lucide-react";
 import { ClientTable } from "@/components/clients/ClientTable";
 import { ClientKanban } from "@/components/clients/ClientKanban";
 import { TopBar } from "@/components/layout/TopBar";
-import { Button } from "@/components/ui/button";
 import { useClients } from "@/hooks/useClients";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuth } from "@/lib/auth-context";
@@ -86,6 +85,8 @@ export default function AdminClientsPage() {
         title="All Clients"
         description="Admin view across every employee owner."
         mode="admin"
+        ctaHref="/admin/clients/new"
+        ctaLabel="Add client"
       />
       <div className="p-4 lg:p-8">
         {/* View toggle */}

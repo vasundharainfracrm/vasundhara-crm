@@ -29,8 +29,6 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isAdminAuthPage = pathname === "/admin/login";
-  const isUserAuthPage = pathname === "/login" || pathname === "/forgot-password" || pathname === "/signup";
-
   const isAdminRoute = pathname.startsWith("/admin") && !isAdminAuthPage;
   const isDashboardRoute = pathname.startsWith("/dashboard");
   const isPendingApprovalRoute = pathname === "/pending-approval";
