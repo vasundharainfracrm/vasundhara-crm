@@ -19,6 +19,7 @@ export const clientSchema = z.object({
   bhkRequirement: z.string().min(1, "BHK requirement is required."),
   purpose: z.enum(["buy", "rent", "investment"]),
   leadSource: z.string().min(1, "Lead source is required."),
+  dealers: z.array(z.string().min(1, "Dealer name cannot be empty.")),
   leadStatus: z.enum(leadStatuses),
   priority: z.enum(["high", "medium", "low"]),
   notes: z.string(),

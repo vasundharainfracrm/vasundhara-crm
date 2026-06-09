@@ -16,9 +16,13 @@ type TopBarProps = {
   ctaLabel?: string;
   /** If provided, shows a bordered back button in the navbar that navigates here */
   backHref?: string;
+  /** When provided, the top-bar search input becomes a controlled live search */
+  onSearch?: (term: string) => void;
+  /** Current search value for the controlled input */
+  searchValue?: string;
 };
 
-export function TopBar({ title, mode, ctaHref, ctaLabel, backHref }: TopBarProps) {
+export function TopBar({ title, mode, ctaHref, ctaLabel, backHref, onSearch, searchValue }: TopBarProps) {
   const router = useRouter();
 
   return (
@@ -44,8 +48,11 @@ export function TopBar({ title, mode, ctaHref, ctaLabel, backHref }: TopBarProps
         <div className="hidden w-64 items-center gap-2 rounded-lg border bg-surface px-3 focus-within:ring-2 focus-within:ring-accent md:flex">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input
+            id="topbar-search"
             className="flex h-9 w-full bg-transparent px-0 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none border-0 shadow-none"
             placeholder="Search workspace"
+            value={onSearch !== undefined ? (searchValue ?? "") : undefined}
+            onChange={onSearch ? (e) => onSearch(e.target.value) : undefined}
           />
         </div>
 

@@ -17,6 +17,7 @@ export const leadSources = [
   "Online",
   "Referral",
   "Social",
+  "Dealer",
   "Other",
 ] as const;
 
@@ -57,6 +58,8 @@ export type Client = {
   bhkRequirement: string;
   purpose: LeadPurpose;
   leadSource: string;
+  /** Populated when leadSource === "Dealer". One or more dealer names. */
+  dealers?: string[];
   leadStatus: LeadStatus;
   priority: LeadPriority;
   notes: string;
@@ -103,6 +106,8 @@ export type ClientFormValues = {
   bhkRequirement: string;
   purpose: LeadPurpose;
   leadSource: string;
+  /** Names of dealers attached to this lead (populated when leadSource === "Dealer"). */
+  dealers: string[];
   leadStatus: LeadStatus;
   priority: LeadPriority;
   notes: string;

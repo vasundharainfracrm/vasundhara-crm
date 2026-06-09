@@ -82,6 +82,8 @@ export default function ClientsPage() {
         mode="employee"
         ctaHref="/dashboard/clients/new"
         ctaLabel="Add client"
+        onSearch={setSearch}
+        searchValue={filters.search}
       />
       <div className="p-4 lg:p-8">
         {/* View toggle */}

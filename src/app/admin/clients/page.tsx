@@ -87,6 +87,8 @@ export default function AdminClientsPage() {
         mode="admin"
         ctaHref="/admin/clients/new"
         ctaLabel="Add client"
+        onSearch={setSearch}
+        searchValue={filters.search}
       />
       <div className="p-4 lg:p-8">
         {/* View toggle */}

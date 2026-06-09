@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
+import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
@@ -32,6 +33,7 @@ function clientDefaults(client?: Client): ClientFormValues {
     bhkRequirement: client?.bhkRequirement || "2 BHK",
     purpose: client?.purpose || "buy",
     leadSource: client?.leadSource || "Online",
+    dealers: client?.dealers ?? [],
     leadStatus: client?.leadStatus || "new_lead",
     priority: client?.priority || "medium",
     notes: client?.notes || "",
@@ -76,11 +78,38 @@ export function ClientForm({ client, inline = false, onDirtyChange, submitRef, r
     control,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isDirty },
   } = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
     defaultValues: clientDefaults(client),
   });
+
+  // Watch the dealers array and lead source directly for the multi-input UI
+  const dealers = watch("dealers") ?? [];
+  const leadSource = watch("leadSource");
+
+  function addDealer() {
+    setValue("dealers", [...dealers, ""], { shouldDirty: true });
+  }
+
+  function removeDealer(index: number) {
+    setValue(
+      "dealers",
+      dealers.filter((_, i) => i !== index),
+      { shouldDirty: true },
+    );
+  }
+
+  // When the user switches away from "Dealer", clear any typed dealer names
+  const prevLeadSourceRef = useRef(leadSource);
+  useEffect(() => {
+    if (prevLeadSourceRef.current === "Dealer" && leadSource !== "Dealer") {
+      setValue("dealers", [], { shouldDirty: true });
+    }
+    prevLeadSourceRef.current = leadSource;
+  }, [leadSource, setValue]);
 
   // Report dirty state to parent
   useEffect(() => {
@@ -221,6 +250,7 @@ export function ClientForm({ client, inline = false, onDirtyChange, submitRef, r
                 <option>Online</option>
                 <option>Referral</option>
                 <option>Social</option>
+                <option>Dealer</option>
                 <option>Other</option>
               </Select>
             </Field>
@@ -251,6 +281,71 @@ export function ClientForm({ client, inline = false, onDirtyChange, submitRef, r
                 )}
               />
             </Field>
+
+            {/* ── Dealer multi-input — visible only when Lead Source = "Dealer" ── */}
+            {leadSource === "Dealer" && (
+              <div className="md:col-span-2 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">
+                    Dealers
+                    <span className="ml-1 text-xs text-muted-foreground">(at least one required)</span>
+                  </p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={addDealer}
+                    className="gap-1.5"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Dealer
+                  </Button>
+                </div>
+
+                {dealers.length === 0 && (
+                  <p className="rounded-lg border border-dashed border-border bg-surface/40 py-4 text-center text-sm text-muted-foreground">
+                    No dealers added yet. Click &ldquo;Add Dealer&rdquo; to attach one.
+                  </p>
+                )}
+
+                <div className="space-y-2">
+                  {dealers.map((dealerName, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Input
+                        id={`dealer-input-${index}`}
+                        placeholder={`Dealer name ${index + 1}`}
+                        value={dealerName}
+                        onChange={(e) => {
+                          const updated = [...dealers];
+                          updated[index] = e.target.value;
+                          setValue("dealers", updated, { shouldDirty: true });
+                        }}
+                        className="flex-1"
+                      />
+                      <button
+                        type="button"
+                        title="Remove dealer"
+                        onClick={() => removeDealer(index)}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Show per-dealer validation errors */}
+                {Array.isArray(errors.dealers) &&
+                  (errors.dealers as { message?: string }[]).map((err, i) =>
+                    err?.message ? (
+                      <p key={i} className="text-xs text-destructive">
+                        Dealer {i + 1}: {err.message}
+                      </p>
+                    ) : null,
+                  )}
+              </div>
+            )}
+
             <div className="md:col-span-2 min-w-0">
               <Field label="Notes" error={errors.notes?.message}>
                 <Textarea {...register("notes")} />

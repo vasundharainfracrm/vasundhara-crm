@@ -77,6 +77,8 @@ export function useClients(user: AppUser | null) {
           client.city,
           client.preferredLocation,
           client.assignedUserName,
+          // Include dealer names so searching by dealer name finds all linked leads
+          ...(client.dealers ?? []),
         ]
           .join(" ")
           .toLowerCase();
