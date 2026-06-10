@@ -29,6 +29,7 @@ const adminNav: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: Home },
   { label: "All Clients", href: "/admin/clients", icon: BriefcaseBusiness },
   { label: "Employees", href: "/admin/employees", icon: Users },
+  { label: "Follow-ups", href: "/admin/follow-ups", icon: ClipboardList },
   { label: "Reports", href: "/admin/reports", icon: BarChart3 },
   { label: "Audit Logs", href: "/admin/audit-logs", icon: ScrollText },
 ];

@@ -78,6 +78,7 @@ export type FollowUp = {
   note: string;
   nextFollowUpDate: Timestamp | null;
   status: LeadStatus;
+  priority?: LeadPriority;
   createdBy: string;
   createdByName: string;
   createdAt: Timestamp;

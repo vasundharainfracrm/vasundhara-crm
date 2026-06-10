@@ -1,41 +1,55 @@
 import {
   addDoc,
   collection,
+  doc,
   limit,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
+  updateDoc,
   where,
   type Unsubscribe,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toTimestamp } from "@/services/clients";
 import { writeAuditLog } from "@/services/audit";
-import type { AppUser, Client, FollowUp, LeadStatus } from "@/types";
+import type { AppUser, Client, FollowUp } from "@/types";
 
 export async function createFollowUp(
-  values: { note: string; nextFollowUpDate?: string; status: LeadStatus },
+  values: { note: string; nextFollowUpDate?: string },
   client: Client,
   user: AppUser,
 ) {
+  const nextTs = toTimestamp(values.nextFollowUpDate || "");
+
+  // 1. Write the interaction log entry
   await addDoc(collection(db, "followups"), {
     clientId: client.clientId,
     clientName: client.fullName,
     note: values.note,
-    nextFollowUpDate: toTimestamp(values.nextFollowUpDate || ""),
-    status: values.status,
+    nextFollowUpDate: nextTs,
+    status: client.leadStatus,
     createdBy: user.uid,
     createdByName: user.fullName,
     createdAt: serverTimestamp(),
   });
+
+  // 2. Update the client's followUpDate so the follow-up page reflects the new date.
+  //    This clears overdue status when the employee logs an interaction with a new date.
+  if (values.nextFollowUpDate) {
+    await updateDoc(doc(db, "clients", client.clientId), {
+      followUpDate: nextTs,
+      updatedAt: serverTimestamp(),
+    });
+  }
 
   await writeAuditLog({
     action: "followup_created",
     performedBy: user.uid,
     performedByName: user.fullName,
     targetId: client.clientId,
-    details: `Added follow-up for ${client.fullName}`,
+    details: `Added follow-up for ${client.fullName}${values.nextFollowUpDate ? ` → next: ${values.nextFollowUpDate}` : ""}`,
   });
 }
 
@@ -44,15 +58,4 @@ export function subscribeClientFollowUps(clientId: string, callback: (followups:
     query(collection(db, "followups"), where("clientId", "==", clientId), orderBy("createdAt", "desc"), limit(50)),
     (snapshot) => callback(snapshot.docs.map((item) => ({ followupId: item.id, ...item.data() }) as FollowUp)),
   );
-}
-
-export function subscribeMyFollowUps(user: AppUser, callback: (followups: FollowUp[]) => void): Unsubscribe {
-  const constraints =
-    user.role === "admin"
-      ? [orderBy("createdAt", "desc"), limit(100)]
-      : [where("createdBy", "==", user.uid), orderBy("nextFollowUpDate", "asc"), limit(100)];
-
-  return onSnapshot(query(collection(db, "followups"), ...constraints), (snapshot) => {
-    callback(snapshot.docs.map((item) => ({ followupId: item.id, ...item.data() }) as FollowUp));
-  });
 }

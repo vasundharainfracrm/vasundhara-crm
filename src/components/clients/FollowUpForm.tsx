@@ -5,18 +5,16 @@ import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
-import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useAuth } from "@/lib/auth-context";
 import { followUpSchema } from "@/lib/validation";
 import { createFollowUp } from "@/services/followups";
-import { leadStatusLabels, type Client, type LeadStatus } from "@/types";
+import { type Client } from "@/types";
 
 type FollowUpValues = {
   note: string;
   nextFollowUpDate: string;
-  status: LeadStatus;
 };
 
 export function FollowUpForm({ client }: { client: Client }) {
@@ -32,7 +30,6 @@ export function FollowUpForm({ client }: { client: Client }) {
     defaultValues: {
       note: "",
       nextFollowUpDate: "",
-      status: client.leadStatus,
     },
   });
 
@@ -40,7 +37,7 @@ export function FollowUpForm({ client }: { client: Client }) {
     if (!user) return;
     try {
       await createFollowUp(values, client, user);
-      reset({ note: "", nextFollowUpDate: "", status: values.status });
+      reset({ note: "", nextFollowUpDate: "" });
       toast.success("Follow-up added.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to add follow-up.");
@@ -52,7 +49,7 @@ export function FollowUpForm({ client }: { client: Client }) {
       <Field label="Note" error={errors.note?.message}>
         <Textarea {...register("note")} />
       </Field>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4">
         <Field label="Next follow-up" error={errors.nextFollowUpDate?.message}>
           <Controller
             control={control}
@@ -61,15 +58,6 @@ export function FollowUpForm({ client }: { client: Client }) {
               <DatePicker value={field.value} onChange={field.onChange} placeholder="Select Date" />
             )}
           />
-        </Field>
-        <Field label="Status" error={errors.status?.message}>
-          <Select {...register("status")}>
-            {Object.entries(leadStatusLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </Select>
         </Field>
       </div>
       <Button type="submit" disabled={isSubmitting}>

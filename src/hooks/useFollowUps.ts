@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  startOfWeek,
-  endOfWeek,
-  isWithinInterval,
-} from "date-fns";
-import { subscribeClientFollowUps, subscribeMyFollowUps } from "@/services/followups";
-import type { AppUser, FollowUp } from "@/types";
+import { endOfWeek, isBefore, isToday, startOfToday } from "date-fns";
+import { subscribeClientFollowUps } from "@/services/followups";
+import { subscribeClients } from "@/services/clients";
+import type { AppUser, Client, FollowUp } from "@/types";
 
+// ─── Client-level follow-up history (for the lead detail page) ─────────────
 export function useClientFollowUps(clientId?: string) {
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
 
@@ -20,6 +18,28 @@ export function useClientFollowUps(clientId?: string) {
   return followUps;
 }
 
+// ─── Internal helper ───────────────────────────────────────────────────────
+/**
+ * Converts a Client's followUpDate into a FollowUp-shaped entry for the
+ * follow-up page. The single source of truth for "is there a follow-up due?"
+ * is client.followUpDate — the followups collection is for history only.
+ */
+function clientToFollowUp(client: Client): FollowUp {
+  return {
+    followupId: `client_${client.clientId}`,
+    clientId: client.clientId,
+    clientName: client.fullName,
+    note: "",
+    nextFollowUpDate: client.followUpDate,
+    status: client.leadStatus,
+    priority: client.priority,
+    createdBy: client.assignedUserId,
+    createdByName: client.assignedUserName,
+    createdAt: client.createdAt,
+  };
+}
+
+// ─── Employee follow-up hook ────────────────────────────────────────────────
 export function useMyFollowUps(user: AppUser | null) {
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,27 +47,45 @@ export function useMyFollowUps(user: AppUser | null) {
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    return subscribeMyFollowUps(user, (items) => {
-      setFollowUps(items);
+
+    // Subscribe ONLY to the employee's clients.
+    // Derive follow-up rows from client.followUpDate — no dual-source, no duplicates.
+    return subscribeClients(user, 300, (clients) => {
+      const withDate = clients
+        .filter((c) => c.followUpDate != null && !c.deletedAt)
+        .map(clientToFollowUp);
+      setFollowUps(withDate);
       setLoading(false);
     });
   }, [user]);
 
   /**
-   * Follow-ups whose nextFollowUpDate falls within the current calendar week
-   * (Monday 00:00 – Sunday 23:59 of the current ISO week).
+   * Overdue (past) + Today + current week follow-ups.
+   * Everything up to end-of-current-week is included so overdue items surface.
    */
   const thisWeekFollowUps = useMemo(() => {
     const now = new Date();
-    const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday
-    const weekEnd = endOfWeek(now, { weekStartsOn: 1 }); // Sunday
-
+    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
     return followUps.filter((fu) => {
       const date = fu.nextFollowUpDate?.toDate?.();
       if (!date) return false;
-      return isWithinInterval(date, { start: weekStart, end: weekEnd });
+      return date <= weekEnd; // past (overdue) + this week
     });
   }, [followUps]);
 
-  return { followUps, thisWeekFollowUps, loading };
+  /** Counts for stat pills on the follow-up page header */
+  const stats = useMemo(() => {
+    const todayStart = startOfToday();
+    let overdue = 0, today = 0, upcoming = 0;
+    for (const fu of thisWeekFollowUps) {
+      const date = fu.nextFollowUpDate?.toDate?.();
+      if (!date) continue;
+      if (isToday(date)) today++;
+      else if (isBefore(date, todayStart)) overdue++;
+      else upcoming++;
+    }
+    return { overdue, today, upcoming };
+  }, [thisWeekFollowUps]);
+
+  return { followUps, thisWeekFollowUps, stats, loading };
 }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 /**
+ * Next.js 16 proxy (replaces the deprecated "middleware" convention).
+ *
  * Decode a Firebase session cookie JWT payload without crypto.
  * Returns null if the token is malformed or expired.
  *
@@ -21,7 +23,7 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const adminSession = request.cookies.get("admin-session")?.value;
   const userSession = request.cookies.get("user-session")?.value;
   // Legacy single-cookie — still supported during transition period

@@ -39,5 +39,4 @@ export const employeeSchema = z.object({
 export const followUpSchema = z.object({
   note: z.string().min(3, "Add a useful follow-up note."),
   nextFollowUpDate: z.string(),
-  status: z.enum(leadStatuses),
 });

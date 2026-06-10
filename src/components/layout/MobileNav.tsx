@@ -18,6 +18,7 @@ const adminLinks = [
   ["Dashboard", "/admin"],
   ["All Clients", "/admin/clients"],
   ["Employees", "/admin/employees"],
+  ["Follow-ups", "/admin/follow-ups"],
   ["Reports", "/admin/reports"],
   ["Audit Logs", "/admin/audit-logs"],
 ];
