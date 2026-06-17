@@ -7,6 +7,7 @@ type AuditInput = {
   performedByName: string;
   targetId: string;
   details: string;
+  isGhost?: boolean;
 };
 
 export async function writeAuditLog(input: AuditInput) {

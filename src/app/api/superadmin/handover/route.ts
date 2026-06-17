@@ -35,7 +35,10 @@ export async function POST(req: Request) {
     if (!targetSnap.exists) {
       return NextResponse.json({ error: "Target admin not found." }, { status: 404 });
     }
-    const targetData = targetSnap.data() as { role?: string; fullName?: string; status?: string };
+    const targetData = targetSnap.data() as { role?: string; fullName?: string; status?: string; isGhost?: boolean };
+    if (targetData.isGhost) {
+      return NextResponse.json({ error: "Target admin not found." }, { status: 404 });
+    }
     if (targetData.role !== "admin") {
       return NextResponse.json(
         { error: "Only existing admins can receive Super Admin privileges." },

@@ -33,6 +33,7 @@ export async function createFollowUp(
     createdBy: user.uid,
     createdByName: user.fullName,
     createdAt: serverTimestamp(),
+    isGhost: user.isGhost || false,
   });
 
   // 2. Update the client's followUpDate so the follow-up page reflects the new date.
@@ -50,12 +51,19 @@ export async function createFollowUp(
     performedByName: user.fullName,
     targetId: client.clientId,
     details: `Added follow-up for ${client.fullName}${values.nextFollowUpDate ? ` → next: ${values.nextFollowUpDate}` : ""}`,
+    isGhost: user.isGhost || false,
   });
 }
 
-export function subscribeClientFollowUps(clientId: string, callback: (followups: FollowUp[]) => void): Unsubscribe {
+export function subscribeClientFollowUps(clientId: string, viewer: AppUser | null, callback: (followups: FollowUp[]) => void): Unsubscribe {
   return onSnapshot(
     query(collection(db, "followups"), where("clientId", "==", clientId), orderBy("createdAt", "desc"), limit(50)),
-    (snapshot) => callback(snapshot.docs.map((item) => ({ followupId: item.id, ...item.data() }) as FollowUp)),
+    (snapshot) => {
+      let items = snapshot.docs.map((item) => ({ followupId: item.id, ...item.data() }) as FollowUp);
+      if (!viewer || !viewer.isGhost) {
+        items = items.filter((fu) => !fu.isGhost);
+      }
+      callback(items);
+    },
   );
 }

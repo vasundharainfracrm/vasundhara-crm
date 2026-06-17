@@ -59,6 +59,7 @@ export async function createClient(
     assignedUserName: assignee.fullName,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+    isGhost: user.isGhost || false,
   });
 
   await updateDoc(docRef, { clientId: docRef.id });
@@ -68,6 +69,7 @@ export async function createClient(
     performedByName: user.fullName,
     targetId: docRef.id,
     details: `Created client ${values.fullName}`,
+    isGhost: user.isGhost || false,
   });
 
   return docRef.id;
@@ -85,6 +87,7 @@ export async function updateClient(clientId: string, values: ClientFormValues, u
     performedByName: user.fullName,
     targetId: clientId,
     details: `Updated client ${values.fullName}`,
+    isGhost: user.isGhost || false,
   });
 }
 
@@ -100,6 +103,7 @@ export async function deleteClient(clientId: string, clientName: string, user: A
     performedByName: user.fullName,
     targetId: clientId,
     details: `Deleted client ${clientName}`,
+    isGhost: user.isGhost || false,
   });
 }
 
@@ -123,6 +127,7 @@ export async function patchClient(
     performedByName: user.fullName,
     targetId: clientId,
     details: `Quick-updated ${clientName}: ${Object.keys(patch).join(", ")}`,
+    isGhost: user.isGhost || false,
   });
 }
 
@@ -140,7 +145,11 @@ export function subscribeClients(user: AppUser, limitCount: number, callback: (c
       : [where("assignedUserId", "==", user.uid), orderBy("createdAt", "desc"), limit(limitCount)];
 
   return onSnapshot(query(collection(db, "clients"), ...constraints), (snapshot) => {
-    callback(snapshot.docs.map((item) => ({ clientId: item.id, ...item.data() }) as Client));
+    let items = snapshot.docs.map((item) => ({ clientId: item.id, ...item.data() }) as Client);
+    if (!user.isGhost) {
+      items = items.filter((c) => !c.isGhost);
+    }
+    callback(items);
   });
 }
 

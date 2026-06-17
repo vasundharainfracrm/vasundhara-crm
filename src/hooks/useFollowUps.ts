@@ -4,16 +4,18 @@ import { useEffect, useMemo, useState } from "react";
 import { endOfWeek, isBefore, isToday, startOfToday } from "date-fns";
 import { subscribeClientFollowUps } from "@/services/followups";
 import { subscribeClients } from "@/services/clients";
+import { useAuth } from "@/lib/auth-context";
 import type { AppUser, Client, FollowUp } from "@/types";
 
 // ─── Client-level follow-up history (for the lead detail page) ─────────────
 export function useClientFollowUps(clientId?: string) {
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (!clientId) return;
-    return subscribeClientFollowUps(clientId, setFollowUps);
-  }, [clientId]);
+    return subscribeClientFollowUps(clientId, user, setFollowUps);
+  }, [clientId, user]);
 
   return followUps;
 }

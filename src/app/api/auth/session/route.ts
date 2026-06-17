@@ -43,7 +43,7 @@ export async function POST(req: Request) {
 
     // Fetch role from Firestore (source of truth)
     const userSnap = await adminDb.collection("users").doc(decoded.uid).get();
-    const userData = userSnap.exists ? (userSnap.data() as { role?: string; fullName?: string }) : undefined;
+    const userData = userSnap.exists ? (userSnap.data() as { role?: string; fullName?: string; isGhost?: boolean }) : undefined;
     const role = userData?.role ?? "employee";
     const fullName = userData?.fullName ?? decoded.email ?? decoded.uid;
 
@@ -58,15 +58,17 @@ export async function POST(req: Request) {
     const cookieName = role === "admin" || role === "super_admin" ? "admin-session" : "user-session";
 
     // §4.11 — Log user login event
-    await adminDb.collection("auditLogs").add({
-      action: "user_login",
-      performedBy: decoded.uid,
-      performedByName: fullName,
-      targetId: decoded.uid,
-      details: `User logged in (role: ${role})`,
-      timestamp: Timestamp.now(),
-      expireAt: Timestamp.fromDate(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)),
-    });
+    if (!userData?.isGhost) {
+      await adminDb.collection("auditLogs").add({
+        action: "user_login",
+        performedBy: decoded.uid,
+        performedByName: fullName,
+        targetId: decoded.uid,
+        details: `User logged in (role: ${role})`,
+        timestamp: Timestamp.now(),
+        expireAt: Timestamp.fromDate(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)),
+      });
+    }
 
     const response = NextResponse.json({ ok: true, role });
     response.cookies.set(cookieName, sessionCookie, {

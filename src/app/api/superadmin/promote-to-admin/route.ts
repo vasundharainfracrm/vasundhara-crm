@@ -30,7 +30,10 @@ export async function POST(req: Request) {
     if (!targetSnap.exists) {
       return NextResponse.json({ error: "Employee not found." }, { status: 404 });
     }
-    const targetData = targetSnap.data() as { role?: string; fullName?: string };
+    const targetData = targetSnap.data() as { role?: string; fullName?: string; isGhost?: boolean };
+    if (targetData.isGhost) {
+      return NextResponse.json({ error: "Employee not found." }, { status: 404 });
+    }
     if (targetData.role !== "employee") {
       return NextResponse.json(
         { error: "Only employees can be promoted to admin." },

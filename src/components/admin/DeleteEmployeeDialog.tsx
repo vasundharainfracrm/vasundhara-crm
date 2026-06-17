@@ -35,8 +35,8 @@ export function DeleteEmployeeDialog({ open, onOpenChange, targetUid, targetName
         const users: AppUser[] = [];
         snap.forEach((doc) => {
           const u = doc.data() as AppUser;
-          // Filter out the user being deleted
-          if (u.uid !== targetUid) {
+          // Filter out the user being deleted and ghost users
+          if (u.uid !== targetUid && !u.isGhost) {
             users.push(u);
           }
         });

@@ -52,7 +52,10 @@ export default function AuditLogsPage() {
 
   // Filter logs
   const filteredLogs = logs.filter(log => {
+    if (log.isGhost) return false;
     const performedByUser = usersMap[log.performedBy];
+    if (performedByUser?.isGhost) return false;
+
     const logRole = performedByUser?.role || "system";
     
     // RBAC

@@ -42,6 +42,7 @@ export type AppUser = {
   status: UserStatus;
   joiningDate: Timestamp | null;
   createdAt: Timestamp;
+  isGhost?: boolean;
 };
 
 export type Client = {
@@ -69,6 +70,7 @@ export type Client = {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   deletedAt?: Timestamp | null;
+  isGhost?: boolean;
 };
 
 export type FollowUp = {
@@ -82,6 +84,7 @@ export type FollowUp = {
   createdBy: string;
   createdByName: string;
   createdAt: Timestamp;
+  isGhost?: boolean;
 };
 
 export type AuditLog = {
@@ -92,6 +95,7 @@ export type AuditLog = {
   targetId: string;
   details: string;
   timestamp: Timestamp;
+  isGhost?: boolean;
 };
 
 export type ClientFormValues = {

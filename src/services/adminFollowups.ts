@@ -17,6 +17,7 @@ import type { AppUser, Client } from "@/types";
  * Used by the super_admin follow-up monitor page.
  */
 export function subscribeAllFollowUpClients(
+  viewer: AppUser,
   callback: (clients: Client[]) => void,
 ): Unsubscribe {
   return onSnapshot(
@@ -26,12 +27,15 @@ export function subscribeAllFollowUpClients(
       orderBy("followUpDate", "asc"),
       limit(500),
     ),
-    (snapshot) =>
-      callback(
-        snapshot.docs
-          .map((d) => ({ clientId: d.id, ...d.data() }) as Client)
-          .filter((c) => !c.deletedAt),
-      ),
+    (snapshot) => {
+      let items = snapshot.docs
+        .map((d) => ({ clientId: d.id, ...d.data() }) as Client)
+        .filter((c) => !c.deletedAt);
+      if (!viewer.isGhost) {
+        items = items.filter((c) => !c.isGhost);
+      }
+      callback(items);
+    },
   );
 }
 
@@ -50,7 +54,7 @@ export function subscribeFollowUpClients(
 ): Unsubscribe {
   // Super admin sees everything — delegate to existing function.
   if (viewer.role === "super_admin") {
-    return subscribeAllFollowUpClients(callback);
+    return subscribeAllFollowUpClients(viewer, callback);
   }
 
   // Admin: fetch all follow-up clients then filter to own + employees only.
@@ -73,11 +77,14 @@ export function subscribeFollowUpClients(
 
   function emit() {
     if (!settled) return;
-    const allowed = latestClients.filter(
+    let allowed = latestClients.filter(
       (c) =>
         c.assignedUserId === viewer.uid ||
         employeeUids.has(c.assignedUserId),
     );
+    if (!viewer.isGhost) {
+      allowed = allowed.filter((c) => !c.isGhost);
+    }
     callback(allowed);
   }
 

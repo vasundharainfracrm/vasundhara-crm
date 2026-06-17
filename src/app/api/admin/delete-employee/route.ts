@@ -18,6 +18,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "You cannot delete your own account." }, { status: 400 });
     }
 
+    const targetSnap = await adminDb.collection("users").doc(targetUid).get();
+    if (!targetSnap.exists) {
+      return NextResponse.json({ error: "User not found." }, { status: 404 });
+    }
+    if (targetSnap.data()?.isGhost) {
+      return NextResponse.json({ error: "User not found." }, { status: 404 });
+    }
+
     // 1. Reassign clients if requested
     if (reassignToUid) {
       const clientsSnapshot = await adminDb.collection("clients").where("assignedTo", "==", targetUid).get();

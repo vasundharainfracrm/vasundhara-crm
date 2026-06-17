@@ -40,7 +40,10 @@ export async function POST(req: Request) {
     if (!targetSnap.exists) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
-    const targetData = targetSnap.data() as { role?: string; fullName?: string; email?: string };
+    const targetData = targetSnap.data() as { role?: string; fullName?: string; email?: string; isGhost?: boolean };
+    if (targetData.isGhost) {
+      return NextResponse.json({ error: "User not found." }, { status: 404 });
+    }
     if (targetData.role === "super_admin") {
       return NextResponse.json(
         { error: "Cannot override the password of a Super Admin account." },

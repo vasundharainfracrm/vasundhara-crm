@@ -8,7 +8,7 @@ import { useEmployees } from "@/hooks/useEmployees";
 
 export default function EditEmployeePage() {
   const params = useParams<{ employeeId: string }>();
-  const { employees } = useEmployees();
+  const { employees, loading } = useEmployees();
   const employee = employees.find((item) => item.uid === params.employeeId);
 
   return (
@@ -21,7 +21,13 @@ export default function EditEmployeePage() {
         ]}
       />
       <div className="p-4 lg:p-8">
-        {employee ? <EmployeeForm employee={employee} /> : <p className="text-sm text-muted-foreground">Loading employee...</p>}
+        {employee ? (
+          <EmployeeForm employee={employee} />
+        ) : loading ? (
+          <p className="text-sm text-muted-foreground">Loading employee...</p>
+        ) : (
+          <p className="text-sm text-muted-foreground">Employee not found.</p>
+        )}
       </div>
     </>
   );
