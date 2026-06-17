@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { subscribeClients } from "@/services/clients";
+import { useMemo, useState } from "react";
+import { useClientsContext } from "@/lib/clients-context";
 import type { AppUser, Client, LeadPriority, LeadSource, LeadStatus } from "@/types";
 
 export type ClientFilters = {
@@ -31,22 +31,8 @@ const defaultFilters: ClientFilters = {
 };
 
 export function useClients(user: AppUser | null) {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { clients, loading, loadMore, hasMore } = useClientsContext();
   const [filters, setFilters] = useState<ClientFilters>(defaultFilters);
-  const [limitCount, setLimitCount] = useState(100);
-
-  useEffect(() => {
-    if (!user) return;
-    setLoading(true);
-    return subscribeClients(user, limitCount, (items) => {
-      setClients(items.filter((c) => !c.deletedAt));
-      setLoading(false);
-    });
-  }, [user, limitCount]);
-
-  const loadMore = () => setLimitCount((prev) => prev + 100);
-  const hasMore = clients.length >= limitCount;
 
   const filteredClients = useMemo(() => {
     const term = filters.search.trim().toLowerCase();

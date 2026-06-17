@@ -1,6 +1,6 @@
 "use client";
 
-import { collection, limit, onSnapshot, orderBy, query } from "firebase/firestore";
+import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -14,12 +14,14 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
-import { ChevronLeft, ChevronRight, Search, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Download, RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function AuditLogsPage() {
   const { user: currentUser } = useAuth();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [usersMap, setUsersMap] = useState<Record<string, AppUser>>({});
+  const [loading, setLoading] = useState(true);
   
   // Filters state
   const [searchQuery, setSearchQuery] = useState("");
@@ -31,23 +33,29 @@ export default function AuditLogsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    const unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const usersSnap = await getDocs(collection(db, "users"));
       const map: Record<string, AppUser> = {};
-      snapshot.forEach(doc => {
+      usersSnap.forEach((doc) => {
         map[doc.id] = doc.data() as AppUser;
       });
       setUsersMap(map);
-    });
 
-    const unsubLogs = onSnapshot(query(collection(db, "auditLogs"), orderBy("timestamp", "desc"), limit(1000)), (snapshot) => {
-      setLogs(snapshot.docs.map((item) => ({ logId: item.id, ...item.data() }) as AuditLog));
-    });
+      const logsSnap = await getDocs(
+        query(collection(db, "auditLogs"), orderBy("timestamp", "desc"), limit(200))
+      );
+      setLogs(logsSnap.docs.map((item) => ({ logId: item.id, ...item.data() }) as AuditLog));
+    } catch (err) {
+      console.error("Failed to fetch audit logs", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return () => {
-      unsubUsers();
-      unsubLogs();
-    };
+  useEffect(() => {
+    loadData();
   }, []);
 
   // Filter logs
@@ -168,9 +176,14 @@ export default function AuditLogsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle>Activity</CardTitle>
-            <Button variant="secondary" size="sm" onClick={downloadCSV} disabled={filteredLogs.length === 0}>
-              <Download className="mr-2 h-4 w-4" /> Download CSV
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={loadData} disabled={loading}>
+                <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} /> Refresh
+              </Button>
+              <Button variant="secondary" size="sm" onClick={downloadCSV} disabled={loading || filteredLogs.length === 0}>
+                <Download className="mr-2 h-4 w-4" /> Download CSV
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
@@ -183,17 +196,25 @@ export default function AuditLogsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedLogs.map((log) => (
-                  <TableRow key={log.logId}>
-                    <TableCell>{log.timestamp?.toDate ? format(log.timestamp.toDate(), "dd MMM yyyy, h:mm a") : "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="uppercase">{log.action.replace(/_/g, ' ')}</Badge>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="py-8 text-center text-muted-foreground animate-pulse">
+                      Loading audit logs...
                     </TableCell>
-                    <TableCell>{log.performedByName}</TableCell>
-                    <TableCell>{log.details}</TableCell>
                   </TableRow>
-                ))}
-                {!paginatedLogs.length ? (
+                ) : (
+                  paginatedLogs.map((log) => (
+                    <TableRow key={log.logId}>
+                      <TableCell>{log.timestamp?.toDate ? format(log.timestamp.toDate(), "dd MMM yyyy, h:mm a") : "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="uppercase">{log.action.replace(/_/g, ' ')}</Badge>
+                      </TableCell>
+                      <TableCell>{log.performedByName}</TableCell>
+                      <TableCell>{log.details}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+                {!loading && !paginatedLogs.length ? (
                   <TableRow>
                     <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
                       No audit logs found.

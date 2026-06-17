@@ -69,7 +69,7 @@ export function LeadsOverTimeChart({ clients, filteredClients }: Props) {
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="min-h-[260px] w-full">
+        <ChartContainer config={chartConfig} className="aspect-[3/1] md:aspect-[4/1] max-h-[300px] min-h-[240px] w-full">
           <AreaChart data={data} margin={{ left: 0, right: 0 }}>
             <defs>
               <linearGradient id="gradAdded" x1="0" y1="0" x2="0" y2="1">

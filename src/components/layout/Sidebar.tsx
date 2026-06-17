@@ -56,7 +56,7 @@ export function Sidebar({ mode }: { mode: "employee" | "admin" }) {
       >
         <div className="flex items-center justify-between mb-4">
           {!isCollapsed && (
-            <Link href={mode === "admin" ? "/admin" : "/dashboard"} className="flex items-center gap-3 rounded-lg px-2 flex-1 min-w-0">
+            <Link href={mode === "admin" ? "/admin" : "/dashboard"} prefetch={false} className="flex items-center gap-3 rounded-lg px-2 flex-1 min-w-0">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="truncate text-sm font-semibold">Vasundhra CRM</p>
@@ -66,7 +66,7 @@ export function Sidebar({ mode }: { mode: "employee" | "admin" }) {
             </Link>
           )}
           {isCollapsed && (
-            <Link href={mode === "admin" ? "/admin" : "/dashboard"} className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-accent-foreground font-bold" title="Vasundhra CRM">
+            <Link href={mode === "admin" ? "/admin" : "/dashboard"} prefetch={false} className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-accent-foreground font-bold" title="Vasundhra CRM">
               V
             </Link>
           )}
@@ -91,6 +91,7 @@ export function Sidebar({ mode }: { mode: "employee" | "admin" }) {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 title={isCollapsed ? item.label : undefined}
                 className={cn(
                   "flex h-10 items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground transition hover:bg-surface hover:text-foreground",
@@ -110,6 +111,7 @@ export function Sidebar({ mode }: { mode: "employee" | "admin" }) {
           
           <Link
             href={mode === "admin" ? "/admin/profile" : "/dashboard/profile"}
+            prefetch={false}
             title={isCollapsed ? "Profile Settings" : undefined}
             className={cn(
               "flex h-10 items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground transition hover:bg-surface hover:text-foreground",

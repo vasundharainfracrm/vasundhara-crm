@@ -24,6 +24,7 @@ export const clientSchema = z.object({
   priority: z.enum(["high", "medium", "low"]),
   notes: z.string(),
   followUpDate: z.string(),
+  createdAt: z.string(),
 });
 
 export const employeeSchema = z.object({

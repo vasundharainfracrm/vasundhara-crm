@@ -40,6 +40,9 @@ function clientDefaults(client?: Client): ClientFormValues {
     followUpDate: client?.followUpDate?.toDate
       ? client.followUpDate.toDate().toISOString().slice(0, 10)
       : "",
+    createdAt: client?.createdAt?.toDate
+      ? client.createdAt.toDate().toISOString().slice(0, 10)
+      : new Date().toISOString().slice(0, 10),
   };
 }
 
@@ -276,6 +279,15 @@ export function ClientForm({ client, inline = false, onDirtyChange, submitRef, r
               <Controller
                 control={control}
                 name="followUpDate"
+                render={({ field }) => (
+                  <DatePicker value={field.value} onChange={field.onChange} />
+                )}
+              />
+            </Field>
+            <Field label="Lead Created Date" error={errors.createdAt?.message}>
+              <Controller
+                control={control}
+                name="createdAt"
                 render={({ field }) => (
                   <DatePicker value={field.value} onChange={field.onChange} />
                 )}

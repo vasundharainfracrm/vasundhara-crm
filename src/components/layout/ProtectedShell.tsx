@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth-context";
 import { useInactivityLogout } from "@/hooks/useInactivityLogout";
+import { ClientsProvider } from "@/lib/clients-context";
 
 export function ProtectedShell({
   mode,
@@ -102,9 +103,11 @@ export function ProtectedShell({
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground lg:flex">
-      <Sidebar mode={mode} />
-      <main className="min-w-0 flex-1">{children}</main>
-    </div>
+    <ClientsProvider user={user}>
+      <div className="min-h-screen bg-background text-foreground lg:flex">
+        <Sidebar mode={mode} />
+        <main className="min-w-0 flex-1">{children}</main>
+      </div>
+    </ClientsProvider>
   );
 }

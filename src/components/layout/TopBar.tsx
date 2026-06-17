@@ -57,7 +57,7 @@ export function TopBar({ title, mode, ctaHref, ctaLabel, backHref, onSearch, sea
         </div>
 
         {ctaHref ? (
-          <Link href={ctaHref} className={cn(buttonVariants(), "inline-flex items-center gap-2")}>
+          <Link href={ctaHref} prefetch={false} className={cn(buttonVariants(), "inline-flex items-center gap-2")}>
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">{ctaLabel}</span>
           </Link>

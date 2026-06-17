@@ -57,26 +57,13 @@ export function subscribeFollowUpClients(
     return subscribeAllFollowUpClients(viewer, callback);
   }
 
-  // Admin: fetch all follow-up clients then filter to own + employees only.
-  // We first load the set of employee UIDs (role === "employee") so we can
-  // exclude leads that belong to other admins.
   let latestClients: Client[] = [];
   let employeeUids: Set<string> = new Set();
-  let settled = false;
-
-  // Kick off a one-time fetch of all user roles to build the employee set.
-  // We refresh it whenever the client snapshot fires to stay current.
-  async function fetchEmployeeUids() {
-    const snap = await getDocs(collection(db, "users"));
-    employeeUids = new Set(
-      snap.docs
-        .filter((d) => (d.data() as AppUser).role === "employee")
-        .map((d) => d.id),
-    );
-  }
+  let clientsSettled = false;
+  let usersSettled = false;
 
   function emit() {
-    if (!settled) return;
+    if (!clientsSettled || !usersSettled) return;
     let allowed = latestClients.filter(
       (c) =>
         c.assignedUserId === viewer.uid ||
@@ -88,25 +75,45 @@ export function subscribeFollowUpClients(
     callback(allowed);
   }
 
-  // Subscribe to follow-up clients (all, then filter client-side).
-  const unsub = onSnapshot(
+  // Subscribe to users once to build and maintain the employee set
+  const unsubUsers = onSnapshot(
+    collection(db, "users"),
+    (snapshot) => {
+      employeeUids = new Set(
+        snapshot.docs
+          .filter((d) => (d.data() as AppUser).role === "employee")
+          .map((d) => d.id),
+      );
+      usersSettled = true;
+      emit();
+    },
+    (error) => {
+      console.error("subscribeFollowUpClients users sub error:", error);
+    }
+  );
+
+  // Subscribe to follow-up clients
+  const unsubClients = onSnapshot(
     query(
       collection(db, "clients"),
       where("followUpDate", "!=", null),
       orderBy("followUpDate", "asc"),
       limit(500),
     ),
-    async (snapshot) => {
+    (snapshot) => {
       latestClients = snapshot.docs
         .map((d) => ({ clientId: d.id, ...d.data() }) as Client)
         .filter((c) => !c.deletedAt);
-
-      // Re-fetch employee UIDs on each snapshot to handle new hires.
-      await fetchEmployeeUids();
-      settled = true;
+      clientsSettled = true;
       emit();
     },
+    (error) => {
+      console.error("subscribeFollowUpClients clients sub error:", error);
+    }
   );
 
-  return unsub;
+  return () => {
+    unsubUsers();
+    unsubClients();
+  };
 }

@@ -85,6 +85,7 @@ export function MobileNav({ mode }: { mode: "employee" | "admin" }) {
                     <Link
                       key={href}
                       href={href}
+                      prefetch={false}
                       onClick={() => setOpen(false)}
                       className="block rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-surface hover:text-foreground"
                     >

@@ -29,6 +29,7 @@ function payloadFromForm(values: ClientFormValues) {
     alternateMobile: normalizePhone(values.alternateMobile || ""),
     budget: Number(values.budget || 0),
     followUpDate: toTimestamp(values.followUpDate),
+    createdAt: toTimestamp(values.createdAt) || serverTimestamp(),
   };
 }
 
@@ -57,7 +58,7 @@ export async function createClient(
     ...payloadFromForm(values),
     assignedUserId: assignee.uid,
     assignedUserName: assignee.fullName,
-    createdAt: serverTimestamp(),
+    createdAt: toTimestamp(values.createdAt) || serverTimestamp(),
     updatedAt: serverTimestamp(),
     isGhost: user.isGhost || false,
   });
@@ -78,6 +79,7 @@ export async function createClient(
 export async function updateClient(clientId: string, values: ClientFormValues, user: AppUser) {
   await updateDoc(doc(db, "clients", clientId), {
     ...payloadFromForm(values),
+    createdAt: toTimestamp(values.createdAt),
     updatedAt: serverTimestamp(),
   });
 

@@ -117,6 +117,7 @@ export type ClientFormValues = {
   priority: LeadPriority;
   notes: string;
   followUpDate: string;
+  createdAt: string;
 };
 
 export type EmployeeFormValues = {
