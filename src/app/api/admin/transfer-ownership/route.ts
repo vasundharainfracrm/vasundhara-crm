@@ -1,22 +1,33 @@
 import { NextResponse } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
+import { z } from "zod";
 import { adminDb } from "@/lib/firebase-admin";
 import { requireAdmin } from "@/lib/server-auth";
+
+// Payload schema — validated server-side before any DB write.
+const transferOwnershipSchema = z.object({
+  clientId: z.string().min(1, "clientId is required."),
+  assignedUserId: z.string().min(1, "assignedUserId is required."),
+  assignedUserName: z.string().min(2, "assignedUserName is required."),
+});
 
 export async function POST(req: Request) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Admin access required." }, { status: 403 });
 
   try {
-    const { clientId, assignedUserId, assignedUserName } = (await req.json()) as {
-      clientId?: string;
-      assignedUserId?: string;
-      assignedUserName?: string;
-    };
+    const body = await req.json();
 
-    if (!clientId || !assignedUserId || !assignedUserName) {
-      return NextResponse.json({ error: "Client and new owner are required." }, { status: 400 });
+    // Server-side validation — client-side Zod can be bypassed via direct API calls
+    const parsed = transferOwnershipSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request.", issues: parsed.error.flatten().fieldErrors },
+        { status: 400 },
+      );
     }
+
+    const { clientId, assignedUserId, assignedUserName } = parsed.data;
 
     await adminDb.collection("clients").doc(clientId).update({
       assignedUserId,
@@ -42,3 +53,4 @@ export async function POST(req: Request) {
     );
   }
 }
+

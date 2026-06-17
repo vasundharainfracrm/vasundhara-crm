@@ -2,14 +2,25 @@ import { NextResponse } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { requireAdmin } from "@/lib/server-auth";
-import type { EmployeeFormValues } from "@/types";
+import { employeeSchema } from "@/lib/validation";
 
 export async function POST(req: Request) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Admin access required." }, { status: 403 });
 
   try {
-    const values = (await req.json()) as EmployeeFormValues;
+    const body = await req.json();
+
+    // Server-side validation — client-side Zod can be bypassed via direct API calls
+    const parsed = employeeSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request.", issues: parsed.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+
+    const values = parsed.data;
     const authUser = await adminAuth.createUser({
       email: values.email,
       password: values.password || Math.random().toString(36).slice(2, 12),

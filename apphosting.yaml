@@ -1,0 +1,28 @@
+# apphosting.yaml
+# Configures the build and run settings for the Cloud Run instance in Firebase App Hosting.
+# Reference: https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  cpu: 1
+  memoryMiB: 512
+  minInstances: 0
+  maxInstances: 10
+  concurrency: 80
+
+# Public environment variables (safe to commit to repository)
+# These are required at BUILD time so Next.js can bundle them into the client-side code.
+env:
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: "AIzaSyD0ejxlgSNKVzlEVT0nVY73fM80MRK4WZQ"
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: "vasundhara-crm.firebaseapp.com"
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: "vasundhara-crm"
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: "vasundhara-crm.firebasestorage.app"
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "327001287014"
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:327001287014:web:e64e38fb92762711c7c0a7"
+  - variable: FIREBASE_ADMIN_PROJECT_ID
+    value: "vasundhara-crm"

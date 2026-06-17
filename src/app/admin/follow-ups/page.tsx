@@ -16,7 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TopBar } from "@/components/layout/TopBar";
-import { subscribeAllFollowUpClients } from "@/services/adminFollowups";
+import { subscribeFollowUpClients } from "@/services/adminFollowups";
+import { useAuth } from "@/lib/auth-context";
 import { leadStatusLabels, type Client } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -74,17 +75,19 @@ function StatCard({
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function AdminFollowUpsPage() {
+  const { user } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [employeeFilter, setEmployeeFilter] = useState<string>("all");
 
   useEffect(() => {
-    return subscribeAllFollowUpClients((data) => {
+    if (!user) return;
+    return subscribeFollowUpClients(user, (data) => {
       setClients(data);
       setLoading(false);
     });
-  }, []);
+  }, [user]);
 
   // ── Derived stats ────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -134,7 +137,11 @@ export default function AdminFollowUpsPage() {
     <>
       <TopBar
         title="Follow-up Monitor"
-        description="Track follow-up activity across all employees and leads."
+        description={
+          user?.role === "super_admin"
+            ? "Track follow-up activity across all admins, employees, and leads."
+            : "Track follow-up activity across your employees and leads."
+        }
         mode="admin"
       />
 

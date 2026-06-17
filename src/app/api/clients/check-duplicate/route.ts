@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import type { DocumentData, QuerySnapshot } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase-admin";
+import { getSessionUser } from "@/lib/server-auth";
 import { normalizePhone } from "@/lib/utils";
 
 export async function POST(req: Request) {
+  // Auth gate — prevent unauthenticated phone/email enumeration
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   try {
     const { primaryMobile, alternateMobile, email } = (await req.json()) as {
       primaryMobile?: string;

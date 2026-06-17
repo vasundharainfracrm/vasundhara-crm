@@ -1,8 +1,37 @@
 import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
+import { rateLimit } from "@/lib/rate-limit";
+
+// Allow 10 login attempts per IP per 15-minute window.
+const RATE_LIMIT = 10;
+const RATE_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
 export async function POST(req: Request) {
+  // ── Rate limiting ──────────────────────────────────────────────────────
+  // X-Forwarded-For is set by Vercel / reverse proxies. Fall back to a
+  // stable key so misconfigured proxies don't open an unlimited bypass.
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+
+  const rl = rateLimit({ key: `session:${ip}`, limit: RATE_LIMIT, windowMs: RATE_WINDOW_MS });
+
+  if (!rl.allowed) {
+    const retryAfterSeconds = Math.ceil((rl.resetAt - Date.now()) / 1000);
+    return NextResponse.json(
+      { error: "Too many login attempts. Please try again later." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(retryAfterSeconds),
+          "X-RateLimit-Limit": String(RATE_LIMIT),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": String(Math.ceil(rl.resetAt / 1000)),
+        },
+      },
+    );
+  }
+
   try {
     const { idToken } = (await req.json()) as { idToken?: string };
     if (!idToken) {
@@ -22,8 +51,6 @@ export async function POST(req: Request) {
     const currentClaims = decoded.firebase?.sign_in_provider ? {} : (decoded as Record<string, unknown>);
     if ((currentClaims as { role?: string }).role !== role) {
       await adminAuth.setCustomUserClaims(decoded.uid, { role });
-      // Force-refresh: re-verify after claim update
-      // (The new idToken from the client will carry the claim on next login)
     }
 
     const expiresIn = 60 * 60 * 8 * 1000; // 8 hours — §4.1 session timeout
@@ -54,3 +81,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unable to create session." }, { status: 401 });
   }
 }
+
