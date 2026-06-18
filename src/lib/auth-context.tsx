@@ -19,9 +19,9 @@ import {
   signOut,
   type User,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
+import { doc, Timestamp } from "firebase/firestore";
 
-import { auth, db } from "@/lib/firebase";
+import { auth, db, getDoc, setDoc } from "@/lib/firebase";
 import type { AppUser } from "@/types";
 
 type AuthContextValue = {

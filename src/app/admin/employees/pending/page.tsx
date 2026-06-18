@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { db, getDocs, updateDoc, deleteDoc } from "@/lib/firebase";
+import { collection, query, where, doc } from "firebase/firestore";
 import type { AppUser } from "@/types";
 import { Button } from "@/components/ui/button";
 import {

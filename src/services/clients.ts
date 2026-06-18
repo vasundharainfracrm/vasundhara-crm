@@ -1,19 +1,15 @@
 import {
-  addDoc,
   collection,
   doc,
-  getDoc,
   limit,
-  onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   Timestamp,
-  updateDoc,
   where,
   type Unsubscribe,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, addDoc, getDoc, onSnapshot, updateDoc } from "@/lib/firebase";
 import type { AppUser, Client, ClientFormValues } from "@/types";
 import { normalizePhone } from "@/lib/utils";
 import { writeAuditLog } from "@/services/audit";

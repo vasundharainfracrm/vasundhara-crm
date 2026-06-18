@@ -19,6 +19,9 @@ const app = getApps().find((a) => a.name === appName) || initializeApp(firebaseC
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
+// Export wrapped Firestore operations for client-side loop protection
+export { getDoc, getDocs, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc } from "./firestore-guard";
+
 // Enable offline multi-tab persistence on the client side
 if (isClient) {
   enableMultiTabIndexedDbPersistence(db).catch((err) => {

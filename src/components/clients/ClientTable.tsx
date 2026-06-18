@@ -3,7 +3,7 @@
 import { format } from "date-fns";
 import Link from "next/link";
 import { ArrowUpDown, Download, Eye, Filter, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,6 +77,8 @@ export function ClientTable({
 }: ClientTableProps) {
   const [sortAsc, setSortAsc] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const basePath = user.role === "admin" || user.role === "super_admin" ? "/admin/clients" : "/dashboard/clients";
 
   const sortedClients = useMemo(() => {
@@ -86,6 +88,20 @@ export function ClientTable({
       return sortAsc ? left - right : right - left;
     });
   }, [clients, sortAsc]);
+
+  // Reset page when filters or sorting change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, sortAsc]);
+
+  const totalRecords = sortedClients.length;
+  const totalPages = Math.ceil(totalRecords / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalRecords);
+
+  const paginatedClients = useMemo(() => {
+    return sortedClients.slice(startIndex, endIndex);
+  }, [sortedClients, startIndex, endIndex]);
 
   const isAdmin = user.role === "admin" || user.role === "super_admin";
 
@@ -265,7 +281,7 @@ export function ClientTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedClients.map((client) => (
+              {paginatedClients.map((client) => (
                 <TableRow key={client.clientId}>
                   <TableCell>
                     <div>
@@ -312,13 +328,69 @@ export function ClientTable({
             </TableBody>
           </Table>
 
-          {hasMore && loadMore && (
-            <div className="mt-4 flex justify-center">
-              <Button variant="secondary" size="sm" onClick={loadMore}>
-                Load More Clients
-              </Button>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-4">
+            {/* Left: pagination info */}
+            <div className="flex items-center gap-4">
+              <span className="text-xs text-muted-foreground">
+                Showing {totalRecords === 0 ? 0 : startIndex + 1}–{endIndex} of {totalRecords} records
+              </span>
+              {hasMore && loadMore && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={loadMore}
+                  className="h-8 text-xs font-semibold text-accent underline hover:bg-accent/5 hover:text-accent/80"
+                >
+                  Load more from server
+                </Button>
+              )}
             </div>
-          )}
+
+            {/* Right: navigation controls + page size selector */}
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Page size selector */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">Rows per page:</span>
+                <Select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="h-8 w-20 py-1 text-xs"
+                >
+                  {[25, 50, 100].map((sz) => (
+                    <option key={sz} value={sz}>
+                      {sz}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              {/* Prev / Next buttons */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                >
+                  Previous
+                </Button>
+                <span className="text-xs font-medium text-foreground">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          </div>
         </CardContent>
       )}
     </Card>

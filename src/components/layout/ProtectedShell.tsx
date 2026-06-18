@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth-context";
 import { useInactivityLogout } from "@/hooks/useInactivityLogout";
 import { ClientsProvider } from "@/lib/clients-context";
+import { Button } from "@/components/ui/button";
+import { Clock, Play } from "lucide-react";
 
 export function ProtectedShell({
   mode,
@@ -18,7 +18,7 @@ export function ProtectedShell({
   children: React.ReactNode;
 }) {
   const { user, loading } = useAuth();
-  useInactivityLogout();
+  const { isInactive, resume } = useInactivityLogout();
 
   useEffect(() => {
     if (loading) return;
@@ -98,6 +98,38 @@ export function ProtectedShell({
           </div>
           <Skeleton className="h-[400px] w-full rounded-xl mt-8" />
         </main>
+      </div>
+    );
+  }
+
+  if (isInactive) {
+    return (
+      <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background/50 backdrop-blur-xl animate-in fade-in duration-300">
+        <div className="relative w-full max-w-md p-8 rounded-2xl border bg-surface/80 shadow-2xl text-center flex flex-col items-center space-y-6 mx-4 border-border">
+          {/* Subtle glowing elements in backdrop */}
+          <div className="absolute -top-10 -left-10 w-32 h-32 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Animated Icon Container */}
+          <div className="relative flex items-center justify-center w-20 h-20 rounded-full bg-accent/10 text-accent border border-accent/20 animate-pulse">
+            <Clock className="w-10 h-10 animate-spin" style={{ animationDuration: "8s" }} />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold tracking-tight">Session Paused</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed px-2">
+              For security and bandwidth efficiency, your active database connection was suspended. Click below to instantly resume your work.
+            </p>
+          </div>
+
+          <Button 
+            onClick={resume} 
+            className="w-full flex items-center justify-center gap-2 group relative overflow-hidden transition-all duration-300 active:scale-95 shadow-md hover:bg-emerald-400"
+          >
+            <Play className="w-4 h-4 transition-transform group-hover:scale-110" />
+            Resume Session
+          </Button>
+        </div>
       </div>
     );
   }

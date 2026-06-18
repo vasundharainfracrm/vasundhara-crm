@@ -12,6 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -132,6 +133,23 @@ export default function AdminFollowUpsPage() {
       return true;
     });
   }, [clients, dateFilter, employeeFilter]);
+
+  // ── Pagination State & Calculations ──────────────────────────
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [dateFilter, employeeFilter, clients]);
+
+  const totalRecords = filtered.length;
+  const totalPages = Math.ceil(totalRecords / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalRecords);
+
+  const paginatedFollowUps = useMemo(() => {
+    return filtered.slice(startIndex, endIndex);
+  }, [filtered, startIndex, endIndex]);
 
   return (
     <>
@@ -296,7 +314,7 @@ export default function AdminFollowUpsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((c) => {
+                  {paginatedFollowUps.map((c) => {
                     const date = (c.followUpDate as unknown as { toDate?: () => Date })?.toDate?.();
                     const urgency = getUrgency(c);
                     return (
@@ -356,6 +374,61 @@ export default function AdminFollowUpsPage() {
                   })}
                 </TableBody>
               </Table>
+            )}
+
+            {/* Pagination Controls */}
+            {filtered.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border p-4">
+                {/* Left: pagination info */}
+                <span className="text-xs text-muted-foreground">
+                  Showing {totalRecords === 0 ? 0 : startIndex + 1}–{endIndex} of {totalRecords} records
+                </span>
+
+                {/* Right: navigation controls + page size selector */}
+                <div className="flex flex-wrap items-center gap-4">
+                  {/* Page size selector */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">Rows per page:</span>
+                    <Select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="h-8 w-20 py-1 text-xs"
+                    >
+                      {[25, 50, 100].map((sz) => (
+                        <option key={sz} value={sz}>
+                          {sz}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  {/* Prev / Next buttons */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-xs font-medium text-foreground">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>

@@ -52,7 +52,7 @@ export function useMyFollowUps(user: AppUser | null) {
 
     // Subscribe ONLY to the employee's clients.
     // Derive follow-up rows from client.followUpDate — no dual-source, no duplicates.
-    return subscribeClients(user, 300, (clients) => {
+    return subscribeClients(user, 2000, (clients) => {
       const withDate = clients
         .filter((c) => c.followUpDate != null && !c.deletedAt)
         .map(clientToFollowUp);

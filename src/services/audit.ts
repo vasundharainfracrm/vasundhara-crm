@@ -1,5 +1,5 @@
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { collection, serverTimestamp } from "firebase/firestore";
+import { db, addDoc } from "@/lib/firebase";
 
 type AuditInput = {
   action: string;

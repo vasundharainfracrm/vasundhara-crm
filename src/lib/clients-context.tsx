@@ -17,7 +17,7 @@ const ClientsContext = createContext<ClientsContextValue | null>(null);
 export function ClientsProvider({ user, children }: { user: AppUser | null; children: ReactNode }) {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
-  const [limitCount, setLimitCount] = useState(100);
+  const [limitCount, setLimitCount] = useState(2000);
 
   useEffect(() => {
     if (!user) {

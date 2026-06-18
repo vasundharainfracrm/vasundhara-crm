@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { collection, query, where } from "firebase/firestore";
+import { db, getDocs } from "@/lib/firebase";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";

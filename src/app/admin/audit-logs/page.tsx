@@ -1,13 +1,13 @@
 "use client";
 
-import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
+import { collection, limit, orderBy, query } from "firebase/firestore";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TopBar } from "@/components/layout/TopBar";
-import { db } from "@/lib/firebase";
+import { db, getDocs } from "@/lib/firebase";
 import type { AuditLog, AppUser } from "@/types";
 import { useAuth } from "@/lib/auth-context";
 import { Input } from "@/components/ui/input";
