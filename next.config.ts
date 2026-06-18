@@ -19,6 +19,21 @@ const securityHeaders = [
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
   },
+  // Content Security Policy
+  {
+    key: "Content-Security-Policy",
+    value:
+      "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.firebaseapp.com https://*.googleapis.com; " +
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+      "font-src 'self' https://fonts.gstatic.com data:; " +
+      "connect-src 'self' https://*.googleapis.com https://*.firebase.com https://*.firebaseapp.com https://*.firebaseio.com wss://*.firebaseio.com; " +
+      "img-src 'self' data: blob: https://*.googleapis.com https://*.googleusercontent.com; " +
+      "frame-src 'self' https://*.firebaseapp.com https://*.google.com https://*.googleapis.com; " +
+      "object-src 'none'; " +
+      "base-uri 'self'; " +
+      "form-action 'self';",
+  },
 ];
 
 const nextConfig: NextConfig = {

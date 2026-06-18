@@ -6,10 +6,12 @@ import { LeadStatusChart } from "@/components/dashboard/LeadStatusChart";
 import { RecentActivityFeed } from "@/components/dashboard/RecentActivityFeed";
 import { useClients } from "@/hooks/useClients";
 import { useAuth } from "@/lib/auth-context";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { clients, metrics } = useClients(user);
+  const { clients, loading, limitCount, hasMore } = useClients(user);
+  const { metrics } = useDashboardStats(user, clients, loading, limitCount, hasMore);
 
   return (
     <>

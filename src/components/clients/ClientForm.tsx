@@ -16,6 +16,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { DuplicateWarningModal } from "@/components/clients/DuplicateWarningModal";
 import { useAuth } from "@/lib/auth-context";
 import { clientSchema } from "@/lib/validation";
+import { toISTDateString } from "@/lib/utils";
 import { checkDuplicateClient, createClient, updateClient } from "@/services/clients";
 import { leadStatusLabels, priorityLabels, type Client, type ClientFormValues } from "@/types";
 
@@ -38,11 +39,11 @@ function clientDefaults(client?: Client): ClientFormValues {
     priority: client?.priority || "medium",
     notes: client?.notes || "",
     followUpDate: client?.followUpDate?.toDate
-      ? client.followUpDate.toDate().toISOString().slice(0, 10)
+      ? toISTDateString(client.followUpDate.toDate())
       : "",
     createdAt: client?.createdAt?.toDate
-      ? client.createdAt.toDate().toISOString().slice(0, 10)
-      : new Date().toISOString().slice(0, 10),
+      ? toISTDateString(client.createdAt.toDate())
+      : toISTDateString(new Date()),
   };
 }
 
@@ -289,7 +290,11 @@ export function ClientForm({ client, inline = false, onDirtyChange, submitRef, r
                 control={control}
                 name="createdAt"
                 render={({ field }) => (
-                  <DatePicker value={field.value} onChange={field.onChange} />
+                  <DatePicker 
+                    value={field.value} 
+                    onChange={field.onChange} 
+                    disabledDates={{ after: new Date() }}
+                  />
                 )}
               />
             </Field>

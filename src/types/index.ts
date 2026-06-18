@@ -70,6 +70,8 @@ export type Client = {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   deletedAt?: Timestamp | null;
+  deletedById?: string | null;
+  deletedByName?: string | null;
   isGhost?: boolean;
 };
 

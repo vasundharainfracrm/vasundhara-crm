@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 import type { DocumentData, QuerySnapshot } from "firebase-admin/firestore";
+import { z } from "zod";
 import { adminDb } from "@/lib/firebase-admin";
 import { getSessionUser } from "@/lib/server-auth";
 import { normalizePhone } from "@/lib/utils";
+
+const checkDuplicateSchema = z.object({
+  primaryMobile: z.string().min(1, "Primary mobile is required."),
+  alternateMobile: z.string().optional().or(z.null()),
+  email: z.string().email("Enter a valid email.").optional().or(z.literal("")).or(z.null()),
+});
 
 export async function POST(req: Request) {
   // Auth gate — prevent unauthenticated phone/email enumeration
@@ -12,11 +19,16 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { primaryMobile, alternateMobile, email } = (await req.json()) as {
-      primaryMobile?: string;
-      alternateMobile?: string;
-      email?: string;
-    };
+    const body = await req.json();
+    const parsed = checkDuplicateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request.", issues: parsed.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+
+    const { primaryMobile, alternateMobile, email } = parsed.data;
 
     const primary = normalizePhone(primaryMobile || "");
     const alternate = normalizePhone(alternateMobile || "");

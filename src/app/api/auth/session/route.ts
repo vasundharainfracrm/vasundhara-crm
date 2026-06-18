@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       await adminAuth.setCustomUserClaims(decoded.uid, { role });
     }
 
-    const expiresIn = 60 * 60 * 8 * 1000; // 8 hours — §4.1 session timeout
+    const expiresIn = 60 * 60 * 24 * 7 * 1000; // 7 days (168 hours)
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
     const cookieName = role === "admin" || role === "super_admin" ? "admin-session" : "user-session";
 

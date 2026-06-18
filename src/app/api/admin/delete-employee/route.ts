@@ -1,18 +1,29 @@
 import { NextResponse } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
+import { z } from "zod";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { requireAdmin } from "@/lib/server-auth";
+
+const deleteEmployeeSchema = z.object({
+  targetUid: z.string().min(1, "Target UID is required."),
+  reassignToUid: z.string().optional().or(z.null()),
+});
 
 export async function POST(req: Request) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Admin access required." }, { status: 403 });
 
   try {
-    const { targetUid, reassignToUid } = await req.json();
-
-    if (!targetUid) {
-      return NextResponse.json({ error: "Target UID is required." }, { status: 400 });
+    const body = await req.json();
+    const parsed = deleteEmployeeSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request.", issues: parsed.error.flatten().fieldErrors },
+        { status: 400 },
+      );
     }
+
+    const { targetUid, reassignToUid } = parsed.data;
 
     if (targetUid === admin.uid) {
       return NextResponse.json({ error: "You cannot delete your own account." }, { status: 400 });

@@ -28,6 +28,16 @@ export function normalizePhone(value: string) {
   return value.replace(/\D/g, "");
 }
 
+export function toISTDateString(date: Date): string {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
+  return formatter.format(date);
+}
+
 export function getAuthErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     const msg = error.message;

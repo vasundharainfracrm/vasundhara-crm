@@ -101,10 +101,12 @@ export default function AdminClientDetailPage() {
         {/* ── Sticky action bar ──────────────────────────────── */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(true)}>
-              <Trash2 className="h-4 w-4 text-danger" />
-              Delete
-            </Button>
+            {user?.role === "super_admin" && (
+              <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(true)}>
+                <Trash2 className="h-4 w-4 text-danger" />
+                Delete
+              </Button>
+            )}
             <Button variant="secondary" size="sm" onClick={() => setTransferOpen(true)}>
               <ArrowRightLeft className="h-4 w-4" />
               Transfer

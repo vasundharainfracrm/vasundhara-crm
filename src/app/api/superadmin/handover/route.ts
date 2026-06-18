@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
+import { z } from "zod";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { requireSuperAdmin } from "@/lib/server-auth";
+
+const handoverSchema = z.object({
+  newSuperAdminUid: z.string().min(1, "newSuperAdminUid is required."),
+});
 
 /**
  * POST /api/superadmin/handover
@@ -20,11 +25,16 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { newSuperAdminUid } = (await req.json()) as { newSuperAdminUid?: string };
-
-    if (!newSuperAdminUid) {
-      return NextResponse.json({ error: "newSuperAdminUid is required." }, { status: 400 });
+    const body = await req.json();
+    const parsed = handoverSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request.", issues: parsed.error.flatten().fieldErrors },
+        { status: 400 },
+      );
     }
+
+    const { newSuperAdminUid } = parsed.data;
 
     if (newSuperAdminUid === superAdmin.uid) {
       return NextResponse.json({ error: "Cannot transfer Super Admin to yourself." }, { status: 400 });

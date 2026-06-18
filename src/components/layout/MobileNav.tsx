@@ -70,11 +70,14 @@ export function MobileNav({ mode }: { mode: "employee" | "admin" }) {
               />
               <div className="relative z-10 flex h-full w-80 max-w-[85vw] flex-col border-r bg-background p-4 shadow-xl overflow-y-auto">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold">Vasundhra CRM</p>
-                    <p className="text-xs text-muted-foreground">
-                      {mode === "admin" ? "Admin" : "Employee"} workspace
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <img src="/vasu-logo-mark.png" alt="Logo" className="h-8 w-8 object-contain rounded" />
+                    <div>
+                      <p className="text-sm font-semibold">Vasundhra CRM</p>
+                      <p className="text-xs text-muted-foreground">
+                        {mode === "admin" ? "Admin" : "Employee"} workspace
+                      </p>
+                    </div>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close navigation">
                     <X className="h-4 w-4" />

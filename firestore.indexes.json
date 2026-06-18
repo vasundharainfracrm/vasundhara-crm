@@ -23,6 +23,179 @@
         { "fieldPath": "createdBy", "order": "ASCENDING" },
         { "fieldPath": "nextFollowUpDate", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "followups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "clientId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedUserId", "order": "ASCENDING" },
+        { "fieldPath": "deletedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isGhost", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isGhost", "order": "ASCENDING" },
+        { "fieldPath": "leadStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isGhost", "order": "ASCENDING" },
+        { "fieldPath": "followUpDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "leadStatus", "order": "ASCENDING" },
+        { "fieldPath": "deletedAt", "order": "ASCENDING" },
+        { "fieldPath": "followUpDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "leadStatus", "order": "ASCENDING" },
+        { "fieldPath": "followUpDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "createdAt", "order": "ASCENDING" },
+        { "fieldPath": "deletedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "leadStatus", "order": "ASCENDING" },
+        { "fieldPath": "deletedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "deletedAt", "order": "ASCENDING" },
+        { "fieldPath": "followUpDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isGhost", "order": "ASCENDING" },
+        { "fieldPath": "leadStatus", "order": "ASCENDING" },
+        { "fieldPath": "followUpDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedUserId", "order": "ASCENDING" },
+        { "fieldPath": "deletedAt", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedUserId", "order": "ASCENDING" },
+        { "fieldPath": "isGhost", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedUserId", "order": "ASCENDING" },
+        { "fieldPath": "deletedAt", "order": "ASCENDING" },
+        { "fieldPath": "leadStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedUserId", "order": "ASCENDING" },
+        { "fieldPath": "isGhost", "order": "ASCENDING" },
+        { "fieldPath": "leadStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedUserId", "order": "ASCENDING" },
+        { "fieldPath": "deletedAt", "order": "ASCENDING" },
+        { "fieldPath": "followUpDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedUserId", "order": "ASCENDING" },
+        { "fieldPath": "isGhost", "order": "ASCENDING" },
+        { "fieldPath": "followUpDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedUserId", "order": "ASCENDING" },
+        { "fieldPath": "leadStatus", "order": "ASCENDING" },
+        { "fieldPath": "followUpDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedUserId", "order": "ASCENDING" },
+        { "fieldPath": "deletedAt", "order": "ASCENDING" },
+        { "fieldPath": "leadStatus", "order": "ASCENDING" },
+        { "fieldPath": "followUpDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedUserId", "order": "ASCENDING" },
+        { "fieldPath": "isGhost", "order": "ASCENDING" },
+        { "fieldPath": "leadStatus", "order": "ASCENDING" },
+        { "fieldPath": "followUpDate", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

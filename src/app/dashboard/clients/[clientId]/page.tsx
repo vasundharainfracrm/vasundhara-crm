@@ -98,10 +98,12 @@ export default function ClientDetailPage() {
       <div className="space-y-5 p-4 lg:p-8">
         {/* ── Sticky action bar ──────────────────────────────── */}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(true)}>
-            <Trash2 className="h-4 w-4 text-danger" />
-            Delete
-          </Button>
+          {user?.role === "super_admin" && (
+            <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(true)}>
+              <Trash2 className="h-4 w-4 text-danger" />
+              Delete
+            </Button>
+          )}
 
           {isDirty && (
             <div className="flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/5 px-3 py-1.5">

@@ -56,7 +56,8 @@ export function Sidebar({ mode }: { mode: "employee" | "admin" }) {
       >
         <div className="flex items-center justify-between mb-4">
           {!isCollapsed && (
-            <Link href={mode === "admin" ? "/admin" : "/dashboard"} prefetch={false} className="flex items-center gap-3 rounded-lg px-2 flex-1 min-w-0">
+            <Link href={mode === "admin" ? "/admin" : "/dashboard"} prefetch={false} className="flex items-center gap-2 rounded-lg px-2 flex-1 min-w-0 hover:opacity-90 transition-opacity">
+              <img src="/vasu-logo-mark.png" alt="Logo" className="h-6 w-6 shrink-0 object-contain rounded" />
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="truncate text-sm font-semibold">Vasundhra CRM</p>
@@ -66,8 +67,8 @@ export function Sidebar({ mode }: { mode: "employee" | "admin" }) {
             </Link>
           )}
           {isCollapsed && (
-            <Link href={mode === "admin" ? "/admin" : "/dashboard"} prefetch={false} className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-accent-foreground font-bold" title="Vasundhra CRM">
-              V
+            <Link href={mode === "admin" ? "/admin" : "/dashboard"} prefetch={false} className="mx-auto flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-surface border border-border p-1" title="Vasundhra CRM">
+              <img src="/vasu-logo-mark.png" alt="Logo" className="h-full w-full object-contain" />
             </Link>
           )}
           <Button

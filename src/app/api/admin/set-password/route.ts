@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
+import { z } from "zod";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { requireSuperAdmin } from "@/lib/server-auth";
+
+const setPasswordSchema = z.object({
+  targetUid: z.string().min(1, "targetUid is required."),
+  newPassword: z.string().min(8, "New password must be at least 8 characters."),
+});
 
 /**
  * POST /api/admin/set-password
@@ -20,20 +26,16 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { targetUid, newPassword } = (await req.json()) as {
-      targetUid?: string;
-      newPassword?: string;
-    };
-
-    if (!targetUid) {
-      return NextResponse.json({ error: "targetUid is required." }, { status: 400 });
-    }
-    if (!newPassword || newPassword.length < 8) {
+    const body = await req.json();
+    const parsed = setPasswordSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "New password must be at least 8 characters." },
+        { error: "Invalid request.", issues: parsed.error.flatten().fieldErrors },
         { status: 400 },
       );
     }
+
+    const { targetUid, newPassword } = parsed.data;
 
     // Verify target user exists and is not another super_admin
     const targetSnap = await adminDb.collection("users").doc(targetUid).get();

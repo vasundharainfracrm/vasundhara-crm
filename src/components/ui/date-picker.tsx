@@ -18,9 +18,10 @@ export interface DatePickerProps {
   onChange?: (dateStr: string) => void;
   className?: string;
   placeholder?: string;
+  disabledDates?: any;
 }
 
-export function DatePicker({ value, onChange, className, placeholder = "Pick a date" }: DatePickerProps) {
+export function DatePicker({ value, onChange, className, placeholder = "Pick a date", disabledDates }: DatePickerProps) {
   const [date, setDate] = React.useState<Date | undefined>(() => {
     if (value) {
       return typeof value === 'string' ? parseISO(value) : value;
@@ -65,6 +66,7 @@ export function DatePicker({ value, onChange, className, placeholder = "Pick a d
           mode="single"
           selected={date}
           onSelect={handleSelect}
+          disabled={disabledDates}
         />
       </PopoverContent>
     </Popover>

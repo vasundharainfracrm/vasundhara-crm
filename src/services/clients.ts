@@ -9,23 +9,24 @@ import {
   where,
   type Unsubscribe,
 } from "firebase/firestore";
-import { db, addDoc, getDoc, onSnapshot, updateDoc } from "@/lib/firebase";
+import { db, addDoc, getDoc, onSnapshot, updateDoc, deleteDoc } from "@/lib/firebase";
 import type { AppUser, Client, ClientFormValues } from "@/types";
-import { normalizePhone } from "@/lib/utils";
+import { normalizePhone, toISTDateString } from "@/lib/utils";
 import { writeAuditLog } from "@/services/audit";
 
 export function toTimestamp(dateValue?: string | null) {
-  return dateValue ? Timestamp.fromDate(new Date(`${dateValue}T00:00:00`)) : null;
+  return dateValue ? Timestamp.fromDate(new Date(`${dateValue}T00:00:00+05:30`)) : null;
 }
 
 function payloadFromForm(values: ClientFormValues) {
+  const defaultCreated = toISTDateString(new Date());
   return {
     ...values,
     primaryMobile: normalizePhone(values.primaryMobile),
     alternateMobile: normalizePhone(values.alternateMobile || ""),
     budget: Number(values.budget || 0),
     followUpDate: toTimestamp(values.followUpDate),
-    createdAt: toTimestamp(values.createdAt) || serverTimestamp(),
+    createdAt: toTimestamp(values.createdAt || defaultCreated) || serverTimestamp(),
   };
 }
 
@@ -54,7 +55,6 @@ export async function createClient(
     ...payloadFromForm(values),
     assignedUserId: assignee.uid,
     assignedUserName: assignee.fullName,
-    createdAt: toTimestamp(values.createdAt) || serverTimestamp(),
     updatedAt: serverTimestamp(),
     isGhost: user.isGhost || false,
   });
@@ -75,7 +75,6 @@ export async function createClient(
 export async function updateClient(clientId: string, values: ClientFormValues, user: AppUser) {
   await updateDoc(doc(db, "clients", clientId), {
     ...payloadFromForm(values),
-    createdAt: toTimestamp(values.createdAt),
     updatedAt: serverTimestamp(),
   });
 
@@ -92,6 +91,8 @@ export async function updateClient(clientId: string, values: ClientFormValues, u
 export async function deleteClient(clientId: string, clientName: string, user: AppUser) {
   await updateDoc(doc(db, "clients", clientId), {
     deletedAt: serverTimestamp(),
+    deletedById: user.uid,
+    deletedByName: user.fullName,
     updatedAt: serverTimestamp(),
   });
 
@@ -136,23 +137,83 @@ export async function getClient(clientId: string) {
   return { clientId: snap.id, ...snap.data() } as Client;
 }
 
-export function subscribeClients(user: AppUser, limitCount: number, callback: (clients: Client[]) => void): Unsubscribe {
+export function subscribeClients(
+  user: AppUser,
+  limitCount: number,
+  callback: (clients: Client[], rawCount: number) => void
+): Unsubscribe {
   const constraints =
     user.role === "admin" || user.role === "super_admin"
       ? [orderBy("createdAt", "desc"), limit(limitCount)]
       : [where("assignedUserId", "==", user.uid), orderBy("createdAt", "desc"), limit(limitCount)];
 
   return onSnapshot(query(collection(db, "clients"), ...constraints), (snapshot) => {
+    const rawCount = snapshot.docs.length;
     let items = snapshot.docs.map((item) => ({ clientId: item.id, ...item.data() }) as Client);
     if (!user.isGhost) {
       items = items.filter((c) => !c.isGhost);
     }
-    callback(items);
+    callback(items, rawCount);
   });
 }
 
 export function subscribeClient(clientId: string, callback: (client: Client | null) => void): Unsubscribe {
   return onSnapshot(doc(db, "clients", clientId), (snapshot) => {
     callback(snapshot.exists() ? ({ clientId: snapshot.id, ...snapshot.data() } as Client) : null);
+  });
+}
+
+export function subscribeDeletedClients(user: AppUser, callback: (clients: Client[]) => void): Unsubscribe {
+  const constraints =
+    user.role === "admin" || user.role === "super_admin"
+      ? [where("deletedAt", ">=", new Timestamp(0, 0))]
+      : [where("assignedUserId", "==", user.uid), where("deletedAt", ">=", new Timestamp(0, 0))];
+
+  return onSnapshot(query(collection(db, "clients"), ...constraints), (snapshot) => {
+    let items = snapshot.docs.map((item) => ({ clientId: item.id, ...item.data() }) as Client);
+    if (!user.isGhost) {
+      items = items.filter((c) => !c.isGhost);
+    }
+    // Sort client-side by deletedAt desc
+    items.sort((a, b) => {
+      const aTime = a.deletedAt?.toMillis?.() ?? 0;
+      const bTime = b.deletedAt?.toMillis?.() ?? 0;
+      return bTime - aTime;
+    });
+    callback(items);
+  });
+}
+
+export async function restoreClient(clientId: string, clientName: string, user: AppUser) {
+  await updateDoc(doc(db, "clients", clientId), {
+    deletedAt: null,
+    deletedById: null,
+    deletedByName: null,
+    updatedAt: serverTimestamp(),
+  });
+
+  await writeAuditLog({
+    action: "client_restored",
+    performedBy: user.uid,
+    performedByName: user.fullName,
+    targetId: clientId,
+    details: `Restored client ${clientName}`,
+    isGhost: user.isGhost || false,
+  });
+}
+
+export async function permanentDeleteClient(clientId: string, clientName: string, user: AppUser) {
+  if (user.role !== "super_admin") {
+    throw new Error("Unauthorized. Only Super Admins can permanently delete clients.");
+  }
+  await deleteDoc(doc(db, "clients", clientId));
+
+  await writeAuditLog({
+    action: "client_permanently_deleted",
+    performedBy: user.uid,
+    performedByName: user.fullName,
+    targetId: clientId,
+    details: `Permanently deleted client ${clientName}`,
+    isGhost: user.isGhost || false,
   });
 }

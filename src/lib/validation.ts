@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { leadStatuses } from "@/types";
+import { toISTDateString } from "@/lib/utils";
 
 const phoneSchema = z
   .string()
@@ -24,7 +25,11 @@ export const clientSchema = z.object({
   priority: z.enum(["high", "medium", "low"]),
   notes: z.string(),
   followUpDate: z.string(),
-  createdAt: z.string(),
+  createdAt: z.string().refine((val) => {
+    if (!val) return true;
+    const todayIST = toISTDateString(new Date());
+    return val <= todayIST;
+  }, "Creation date cannot be in the future."),
 });
 
 export const employeeSchema = z.object({

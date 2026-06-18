@@ -74,15 +74,29 @@ service cloud.firestore {
     // ─── Clients Collection ──────────────────────────────────────────────────
 
     match /clients/{clientId} {
-      // Admins can read and write any client record.
-      // Employees can only read/write clients that are assigned to them.
-      allow read, write: if isAdmin()
+      // Admins can read any client record.
+      // Employees can only read clients that are assigned to them.
+      allow read: if isAdmin()
         || (isAuth() && resource.data.assignedUserId == request.auth.uid);
 
       // When creating a new client, the employee must assign it to themselves.
       // They cannot create a lead on behalf of another employee.
       allow create: if isAuth()
         && request.resource.data.assignedUserId == request.auth.uid;
+
+      // Allow updates to clients if:
+      // 1. User is an admin or the owner.
+      // 2. And we are not soft-deleting a lead (setting deletedAt to a timestamp) unless we are super_admin.
+      // 3. Or we are clearing deletedAt to null (restoring), which is allowed.
+      allow update: if (isAdmin() || (isAuth() && resource.data.assignedUserId == request.auth.uid)) && (
+        !("deletedAt" in request.resource.data) || 
+        request.resource.data.deletedAt == null || 
+        ("deletedAt" in resource.data && request.resource.data.deletedAt == resource.data.deletedAt) || 
+        isSuperAdmin()
+      );
+
+      // Only super_admin can permanently delete client documents from the database.
+      allow delete: if isSuperAdmin();
     }
 
     // ─── Follow-ups Collection ───────────────────────────────────────────────

@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
+import { z } from "zod";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { requireSuperAdmin } from "@/lib/server-auth";
 import type { AdminFormValues } from "@/types";
+
+const createAdminSchema = z.object({
+  fullName: z.string().min(2, "Full name is required."),
+  email: z.string().email("Enter a valid email."),
+  mobileNumber: z.string().min(10, "Enter a 10 digit mobile number.").regex(/^[0-9+\-\s()]+$/, "Use a valid mobile number."),
+  department: z.string().min(2, "Department is required."),
+  adminPermissions: z.array(z.string()).optional(),
+  password: z.string().min(8, "Password must be at least 8 characters.").optional().or(z.literal("")),
+});
 
 export async function POST(req: Request) {
   const superAdmin = await requireSuperAdmin();
@@ -11,15 +21,16 @@ export async function POST(req: Request) {
   }
 
   try {
-    const values = (await req.json()) as AdminFormValues;
-
-    // Guard: super_admin role cannot be set directly — use the handover flow instead.
-    if ((values as { role?: string }).role === "super_admin") {
+    const body = await req.json();
+    const parsed = createAdminSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Super Admin role cannot be assigned directly. Use the Super Admin handover flow." },
+        { error: "Invalid request.", issues: parsed.error.flatten().fieldErrors },
         { status: 400 },
       );
     }
+
+    const values = parsed.data;
 
     const authUser = await adminAuth.createUser({
       email: values.email,

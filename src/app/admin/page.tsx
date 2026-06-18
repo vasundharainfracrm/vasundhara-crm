@@ -7,10 +7,12 @@ import { TopBar } from "@/components/layout/TopBar";
 import { useClients } from "@/hooks/useClients";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuth } from "@/lib/auth-context";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
-  const { clients, metrics } = useClients(user);
+  const { clients, loading, limitCount, hasMore } = useClients(user);
+  const { metrics } = useDashboardStats(user, clients, loading, limitCount, hasMore);
   const { employees } = useEmployees(Boolean(user?.role === "admin" || user?.role === "super_admin"));
   const activeEmployees = employees.filter((e) => e.status === "active").length;
 

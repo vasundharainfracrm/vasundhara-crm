@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
+import { z } from "zod";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { requireSuperAdmin } from "@/lib/server-auth";
+
+const promoteToAdminSchema = z.object({
+  targetUid: z.string().min(1, "targetUid is required."),
+});
 
 /**
  * POST /api/superadmin/promote-to-admin
@@ -19,11 +24,16 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { targetUid } = (await req.json()) as { targetUid?: string };
-
-    if (!targetUid) {
-      return NextResponse.json({ error: "targetUid is required." }, { status: 400 });
+    const body = await req.json();
+    const parsed = promoteToAdminSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request.", issues: parsed.error.flatten().fieldErrors },
+        { status: 400 },
+      );
     }
+
+    const { targetUid } = parsed.data;
 
     // Verify the target exists and is currently an employee
     const targetSnap = await adminDb.collection("users").doc(targetUid).get();

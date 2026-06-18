@@ -31,7 +31,7 @@ const defaultFilters: ClientFilters = {
 };
 
 export function useClients(user: AppUser | null) {
-  const { clients, loading, loadMore, hasMore } = useClientsContext();
+  const { clients, loading, loadMore, hasMore, limitCount } = useClientsContext();
   const [filters, setFilters] = useState<ClientFilters>(defaultFilters);
 
   const filteredClients = useMemo(() => {
@@ -162,5 +162,6 @@ export function useClients(user: AppUser | null) {
     resetFilters,
     loadMore,
     hasMore,
+    limitCount,
   };
 }

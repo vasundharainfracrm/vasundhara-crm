@@ -17,17 +17,20 @@ const ClientsContext = createContext<ClientsContextValue | null>(null);
 export function ClientsProvider({ user, children }: { user: AppUser | null; children: ReactNode }) {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
-  const [limitCount, setLimitCount] = useState(2000);
+  const [limitCount, setLimitCount] = useState(200);
+  const [rawCount, setRawCount] = useState(0);
 
   useEffect(() => {
     if (!user) {
       setClients([]);
+      setRawCount(0);
       setLoading(true);
       return;
     }
     setLoading(true);
-    const unsub = subscribeClients(user, limitCount, (items) => {
+    const unsub = subscribeClients(user, limitCount, (items, fetchedRawCount) => {
       setClients(items.filter((c) => !c.deletedAt));
+      setRawCount(fetchedRawCount);
       setLoading(false);
     });
     return unsub;
@@ -37,7 +40,7 @@ export function ClientsProvider({ user, children }: { user: AppUser | null; chil
     setLimitCount((prev) => prev + 100);
   }, []);
 
-  const hasMore = clients.length >= limitCount;
+  const hasMore = rawCount >= limitCount;
 
   return (
     <ClientsContext.Provider value={{ clients, loading, limitCount, loadMore, hasMore }}>
