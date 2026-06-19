@@ -54,6 +54,15 @@ async function getTrueCount(user: AppUser, baseQuery: any): Promise<number> {
   return Math.max(0, baseCount - deletedCount - ghostCount);
 }
 
+// Module-level cache for server-side dashboard stats to avoid re-fetching on rapid page switching
+let cachedMetrics: {
+  userId: string;
+  metrics: DashboardMetrics;
+  fetchedAt: number;
+} | null = null;
+
+const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+
 export function useDashboardStats(
   user: AppUser | null,
   clients: Client[],
@@ -115,7 +124,16 @@ export function useDashboardStats(
     };
   }, []);
 
-  const fetchServerStats = useCallback(async (currentUser: AppUser) => {
+  const fetchServerStats = useCallback(async (currentUser: AppUser, forceRefresh = false) => {
+    const now = Date.now();
+    if (!forceRefresh && cachedMetrics && cachedMetrics.userId === currentUser.uid && now - cachedMetrics.fetchedAt < CACHE_DURATION_MS) {
+      setMetrics(cachedMetrics.metrics);
+      setError(null);
+      setHasFetchedServer(true);
+      setLoading(false);
+      return;
+    }
+
     try {
       const today = new Date();
       const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -164,12 +182,12 @@ export function useDashboardStats(
       
       const activeLeads = leadStatuses
         .filter((s) => s !== "closed" && s !== "not_interested")
-        .reduce((sum, s) => sum + (statusCounts[s] ?? 0), 0);
+        .reduce((sum = 0, s) => sum + (statusCounts[s] ?? 0), 0);
 
       const closedLeads = statusCounts.closed ?? 0;
       const conversionRate = total > 0 ? Math.round((closedLeads / total) * 100) : 0;
 
-      setMetrics({
+      const nextMetrics = {
         total,
         activeLeads,
         closedLeads,
@@ -178,7 +196,15 @@ export function useDashboardStats(
         newLeadsToday,
         conversionRate,
         statusCounts,
-      });
+      };
+
+      cachedMetrics = {
+        userId: currentUser.uid,
+        metrics: nextMetrics,
+        fetchedAt: Date.now(),
+      };
+
+      setMetrics(nextMetrics);
       setError(null);
       setHasFetchedServer(true);
     } catch (err) {
@@ -216,7 +242,7 @@ export function useDashboardStats(
     } else {
       // If we reached the limit cap (hasMore is true), fetch true server-side counts only once
       if (!hasFetchedServer) {
-        fetchServerStats(user);
+        fetchServerStats(user, false);
       }
     }
   }, [user, clients, loadingClients, limitCount, hasMore, calculateInMemory, fetchServerStats, hasFetchedServer]);
@@ -224,7 +250,7 @@ export function useDashboardStats(
   const refresh = useCallback(() => {
     if (user) {
       setLoading(true);
-      fetchServerStats(user);
+      fetchServerStats(user, true);
     }
   }, [user, fetchServerStats]);
 

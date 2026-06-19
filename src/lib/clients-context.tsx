@@ -32,6 +32,11 @@ export function ClientsProvider({ user, children }: { user: AppUser | null; chil
   // Keep a ref to tear down the employee-scoped listener when the filter changes
   const employeeUnsubRef = useRef<(() => void) | null>(null);
 
+  // Refs for tracking changes to minimize total count read queries
+  const prevDocIdsRef = useRef<string[]>([]);
+  const prevActiveCountRef = useRef<number>(0);
+  const hasFetchedTotalCountRef = useRef<boolean>(false);
+
   // ─── Employee-scoped listener (admin "Assigned To" filter) ───────────────
   useEffect(() => {
     if (!assignedUserIdFilter) {
@@ -68,19 +73,42 @@ export function ClientsProvider({ user, children }: { user: AppUser | null; chil
       setRawCount(0);
       setTotalCount(null);
       setLoading(true);
+      hasFetchedTotalCountRef.current = false;
+      prevDocIdsRef.current = [];
+      prevActiveCountRef.current = 0;
       return;
     }
 
     setLoading(true);
     const unsub = subscribeClients(user, limitCount, (items, fetchedRawCount) => {
-      setClients(items.filter((c) => !c.deletedAt));
+      const activeItems = items.filter((c) => !c.deletedAt);
+      setClients(activeItems);
       setRawCount(fetchedRawCount);
       setLoading(false);
 
-      // Async fetch total count to stay in sync with database mutations
-      getClientsTotalCount(user)
-        .then(setTotalCount)
-        .catch((err) => console.error("Failed to fetch total count:", err));
+      // Check if document IDs have changed (added or deleted)
+      const currentDocIds = items.map((c) => c.clientId);
+      const isDifferentIds =
+        prevDocIdsRef.current.length !== currentDocIds.length ||
+        currentDocIds.some((id, idx) => prevDocIdsRef.current[idx] !== id);
+
+      const activeCountChanged = prevActiveCountRef.current !== activeItems.length;
+
+      // Only query the server for the total count on initial load, or if a document is added/removed/deleted
+      if (!hasFetchedTotalCountRef.current || isDifferentIds || activeCountChanged) {
+        prevDocIdsRef.current = currentDocIds;
+        prevActiveCountRef.current = activeItems.length;
+        hasFetchedTotalCountRef.current = true;
+
+        // Async fetch total count to stay in sync with database mutations
+        getClientsTotalCount(user)
+          .then(setTotalCount)
+          .catch((err) => {
+            console.error("Failed to fetch total count:", err);
+            // Allow retry next time if it failed
+            hasFetchedTotalCountRef.current = false;
+          });
+      }
     });
     return unsub;
   }, [user, limitCount, assignedUserIdFilter]);

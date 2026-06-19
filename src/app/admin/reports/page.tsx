@@ -13,7 +13,7 @@ import { Field } from "@/components/ui/field";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuth } from "@/lib/auth-context";
-import { subscribeClientsByDateRange } from "@/services/clients";
+import { getClientsByDateRange } from "@/services/clients";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Client } from "@/types";
 import { subMonths, format, startOfMonth } from "date-fns";
@@ -46,12 +46,24 @@ export default function ReportsPage() {
       
     const queryEndDate = to ? new Date(`${to}T23:59:59`) : null;
 
-    const unsub = subscribeClientsByDateRange(user, queryStartDate, queryEndDate, (items) => {
-      setClients(items);
-      setLoading(false);
-    });
+    let active = true;
+    getClientsByDateRange(user, queryStartDate, queryEndDate)
+      .then((items) => {
+        if (active) {
+          setClients(items);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load reports clients:", err);
+        if (active) {
+          setLoading(false);
+        }
+      });
 
-    return unsub;
+    return () => {
+      active = false;
+    };
   }, [user, from, to]);
 
   const filteredClients = useMemo(() => {

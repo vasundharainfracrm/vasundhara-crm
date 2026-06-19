@@ -11,7 +11,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { onSnapshot as firestoreOnSnapshot } from "firebase/firestore";
-import { db, addDoc, getDoc, onSnapshot, updateDoc, deleteDoc } from "@/lib/firebase";
+import { db, addDoc, getDoc, getDocs, onSnapshot, updateDoc, deleteDoc } from "@/lib/firebase";
 import type { AppUser, Client, ClientFormValues } from "@/types";
 import { normalizePhone, toISTDateString } from "@/lib/utils";
 import { writeAuditLog } from "@/services/audit";
@@ -277,16 +277,15 @@ export async function permanentDeleteClient(clientId: string, clientName: string
 }
 
 /**
- * Subscribe to clients created within a specific date range.
+ * Fetch clients created within a specific date range.
  * Query filters and orders on the 'createdAt' field, leveraging automatic single-field indexes.
  * Filters out deleted clients and ghosts (if viewer is not a ghost) client-side.
  */
-export function subscribeClientsByDateRange(
+export async function getClientsByDateRange(
   viewer: AppUser,
   startDate: Date | null,
-  endDate: Date | null,
-  callback: (clients: Client[]) => void
-): Unsubscribe {
+  endDate: Date | null
+): Promise<Client[]> {
   const constraints: any[] = [];
   
   if (startDate) {
@@ -299,14 +298,12 @@ export function subscribeClientsByDateRange(
   constraints.push(orderBy("createdAt", "desc"));
 
   const q = query(collection(db, "clients"), ...constraints);
+  const snapshot = await getDocs(q);
 
-  return firestoreOnSnapshot(q, (snapshot) => {
-    let items = snapshot.docs.map((item) => ({ clientId: item.id, ...item.data() }) as Client);
-    if (!viewer.isGhost) {
-      items = items.filter((c) => !c.isGhost);
-    }
-    // Filter out deleted clients
-    items = items.filter((c) => !c.deletedAt);
-    callback(items);
-  });
+  let items = snapshot.docs.map((item) => ({ clientId: item.id, ...item.data() }) as Client);
+  if (!viewer.isGhost) {
+    items = items.filter((c) => !c.isGhost);
+  }
+  // Filter out deleted clients
+  return items.filter((c) => !c.deletedAt);
 }
