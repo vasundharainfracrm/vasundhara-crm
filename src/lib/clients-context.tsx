@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
-import { subscribeClients } from "@/services/clients";
+import { subscribeClients, getClientsTotalCount } from "@/services/clients";
 import type { AppUser, Client } from "@/types";
 
 type ClientsContextValue = {
@@ -10,6 +10,7 @@ type ClientsContextValue = {
   limitCount: number;
   loadMore: () => void;
   hasMore: boolean;
+  totalCount: number | null;
 };
 
 const ClientsContext = createContext<ClientsContextValue | null>(null);
@@ -19,11 +20,13 @@ export function ClientsProvider({ user, children }: { user: AppUser | null; chil
   const [loading, setLoading] = useState(true);
   const [limitCount, setLimitCount] = useState(200);
   const [rawCount, setRawCount] = useState(0);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
 
   useEffect(() => {
     if (!user) {
       setClients([]);
       setRawCount(0);
+      setTotalCount(null);
       setLoading(true);
       return;
     }
@@ -32,6 +35,11 @@ export function ClientsProvider({ user, children }: { user: AppUser | null; chil
       setClients(items.filter((c) => !c.deletedAt));
       setRawCount(fetchedRawCount);
       setLoading(false);
+
+      // Async fetch total count in database to stay in sync with database mutations
+      getClientsTotalCount(user)
+        .then(setTotalCount)
+        .catch((err) => console.error("Failed to fetch total count:", err));
     });
     return unsub;
   }, [user, limitCount]);
@@ -43,7 +51,7 @@ export function ClientsProvider({ user, children }: { user: AppUser | null; chil
   const hasMore = rawCount >= limitCount;
 
   return (
-    <ClientsContext.Provider value={{ clients, loading, limitCount, loadMore, hasMore }}>
+    <ClientsContext.Provider value={{ clients, loading, limitCount, loadMore, hasMore, totalCount }}>
       {children}
     </ClientsContext.Provider>
   );

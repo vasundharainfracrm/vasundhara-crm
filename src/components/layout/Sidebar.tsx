@@ -37,7 +37,11 @@ const adminNav: NavItem[] = [
 export function Sidebar({ mode }: { mode: "employee" | "admin" }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const nav = mode === "admin" ? adminNav : employeeNav;
+  const nav = mode === "admin"
+    ? (user?.role === "super_admin"
+        ? [...adminNav, { label: "Billing Safety", href: "/admin/billing", icon: Settings }]
+        : adminNav)
+    : employeeNav;
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 

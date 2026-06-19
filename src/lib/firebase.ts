@@ -1,6 +1,11 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore, enableMultiTabIndexedDbPersistence } from "firebase/firestore";
+import { 
+  getFirestore, 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager 
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "demo-api-key",
@@ -17,22 +22,21 @@ const appName = isClient && window.location.pathname.startsWith("/admin") ? "adm
 const app = getApps().find((a) => a.name === appName) || initializeApp(firebaseConfig, appName);
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+// Initialize Firestore with settings
+export const db = isClient
+  ? initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    })
+  : getFirestore(app);
 
 // Export wrapped Firestore operations for client-side loop protection
 export { getDoc, getDocs, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc } from "./firestore-guard";
+import { initBillingListener } from "./firestore-guard";
 
-// Enable offline multi-tab persistence on the client side
+// Initialize soft billing limit listener on the client side
 if (isClient) {
-  enableMultiTabIndexedDbPersistence(db).catch((err) => {
-    if (err.code === "failed-precondition") {
-      // Multiple tabs open, persistence can only be enabled in one tab at a time.
-      console.warn("Firestore persistence failed-precondition (multiple tabs):", err);
-    } else if (err.code === "unimplemented") {
-      // The current browser does not support all of the features required to enable persistence.
-      console.warn("Firestore persistence unimplemented in this browser:", err);
-    } else {
-      console.error("Firestore persistence error:", err);
-    }
-  });
+  initBillingListener(db);
 }

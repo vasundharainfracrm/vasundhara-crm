@@ -26,3 +26,8 @@ env:
     value: "1:327001287014:web:e64e38fb92762711c7c0a7"
   - variable: FIREBASE_ADMIN_PROJECT_ID
     value: "vasundhara-crm"
+
+# Sensitive variables (pulled from Cloud Secret Manager)
+secrets:
+  - variable: BILLING_WEBHOOK_SECRET
+    secret: billing-webhook-secret

@@ -6,6 +6,7 @@ import {
   setDoc as firestoreSetDoc,
   updateDoc as firestoreUpdateDoc,
   deleteDoc as firestoreDeleteDoc,
+  doc,
   DocumentReference,
   DocumentSnapshot,
   Query,
@@ -14,6 +15,7 @@ import {
   UpdateData,
   FirestoreError
 } from "firebase/firestore";
+import { isBillingLimitActive, type BillingConfig } from "./billing-utils";
 
 // Safety limits per browser session (tab)
 // Increased to accommodate legitimate initial loading of large tables/dashboards
@@ -39,6 +41,41 @@ let memoryStats: GuardStats = {
   totalWrites: 0,
 };
 
+let isBillingBlocked = false;
+let bypassRole: string | null = null;
+let billingListenerUnsubscribe: (() => void) | null = null;
+
+export function setBypassRole(role: string | null) {
+  bypassRole = role;
+}
+
+export function initBillingListener(db: any) {
+  if (typeof window === "undefined" || billingListenerUnsubscribe) return;
+
+  try {
+    const billingDocRef = doc(db, "system", "billing");
+    billingListenerUnsubscribe = firestoreOnSnapshot(
+      billingDocRef,
+      (snap) => {
+        if (!snap.exists()) {
+          isBillingBlocked = false;
+          return;
+        }
+        const data = snap.data() as BillingConfig;
+        isBillingBlocked = isBillingLimitActive(data);
+        if (isBillingBlocked && bypassRole !== "admin" && bypassRole !== "super_admin") {
+          triggerAlert("Resource Exhausted: Billing limit exceeded. Database requests blocked.");
+        }
+      },
+      (err) => {
+        console.error("Failed to listen to billing status:", err);
+      }
+    );
+  } catch (err) {
+    console.error("Failed to initialize billing listener:", err);
+  }
+}
+
 function getStats(): GuardStats {
   return memoryStats;
 }
@@ -48,6 +85,13 @@ function saveStats(stats: GuardStats) {
 }
 
 function checkLimits(type: "read" | "write", count: number = 1) {
+  // First check soft billing kill switch (bypassed for admins and superadmins)
+  if (isBillingBlocked && bypassRole !== "admin" && bypassRole !== "super_admin") {
+    const errMsg = "Resource Exhausted: Billing limit exceeded. Database requests blocked to prevent overbilling.";
+    triggerAlert(errMsg);
+    throw new Error(errMsg);
+  }
+
   const stats = getStats();
   const now = Date.now();
 

@@ -17,13 +17,33 @@ export async function getSessionUser(): Promise<AppUser | null> {
 
   if (!session) return null;
 
+  let decoded;
   try {
     // checkRevoked=true enforces server-side revocation (e.g. after password reset)
-    const decoded = await adminAuth.verifySessionCookie(session, true);
+    decoded = await adminAuth.verifySessionCookie(session, true);
+  } catch {
+    return null;
+  }
+
+  try {
     const userSnap = await adminDb.collection("users").doc(decoded.uid).get();
     if (!userSnap.exists) return null;
-    return { uid: decoded.uid, ...(userSnap.data() as Omit<AppUser, "uid">) } as AppUser;
-  } catch {
+    const user = { uid: decoded.uid, ...(userSnap.data() as Omit<AppUser, "uid">) } as AppUser;
+
+    // Enforce soft billing switch (bypass for admin and super_admin roles)
+    if (user.role !== "admin" && user.role !== "super_admin") {
+      const { checkServerBillingLimit, isUserBypassed } = await import("./billing-guard");
+      const isBypassed = await isUserBypassed(user.uid);
+      if (!isBypassed) {
+        await checkServerBillingLimit();
+      }
+    }
+
+    return user;
+  } catch (err: any) {
+    if (err.message?.includes("Resource Exhausted")) {
+      throw err; // Propagate resource exhausted errors so API/Server Actions abort immediately
+    }
     return null;
   }
 }

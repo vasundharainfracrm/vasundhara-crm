@@ -125,5 +125,20 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ─── System Collection ───────────────────────────────────────────────────
+    match /system/{documentId} {
+      // Any authenticated user can read system configuration.
+      allow read: if isAuth();
+      // Only super_admin can write or update system configuration.
+      allow write, update: if isSuperAdmin();
+
+      match /history/{historyId} {
+        // Any authenticated user can read billing history data.
+        allow read: if isAuth();
+        // Only super_admin can write or update billing history data.
+        allow write, update: if isSuperAdmin();
+      }
+    }
+
   }
 }

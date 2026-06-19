@@ -51,6 +51,7 @@ type ClientTableProps = {
   resetFilters: () => void;
   loadMore?: () => void;
   hasMore?: boolean;
+  totalCount?: number | null;
   /** When true, only the filter bar is rendered (used inside the Kanban layout) */
   kanbanMode?: boolean;
 };
@@ -73,12 +74,14 @@ export function ClientTable({
   resetFilters,
   loadMore,
   hasMore,
+  totalCount = null,
   kanbanMode = false,
 }: ClientTableProps) {
   const [sortAsc, setSortAsc] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [isAutoPaging, setIsAutoPaging] = useState(false);
   const basePath = user.role === "admin" || user.role === "super_admin" ? "/admin/clients" : "/dashboard/clients";
 
   const sortedClients = useMemo(() => {
@@ -94,17 +97,6 @@ export function ClientTable({
     setCurrentPage(1);
   }, [filters, sortAsc]);
 
-  const totalRecords = sortedClients.length;
-  const totalPages = Math.ceil(totalRecords / pageSize) || 1;
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalRecords);
-
-  const paginatedClients = useMemo(() => {
-    return sortedClients.slice(startIndex, endIndex);
-  }, [sortedClients, startIndex, endIndex]);
-
-  const isAdmin = user.role === "admin" || user.role === "super_admin";
-
   // Check if any non-search filter is active
   const hasAdvancedFilter =
     filters.status !== "all" ||
@@ -116,6 +108,44 @@ export function ClientTable({
     !!filters.budgetMax ||
     !!filters.followUpFrom ||
     !!filters.followUpTo;
+
+  const totalRecords = sortedClients.length;
+  
+  // Calculate true total pages from database count if not filtered, fallback to local slice
+  const isFiltered = hasAdvancedFilter || !!filters.search.trim();
+  const activeTotalCount = (!isFiltered && totalCount !== null) ? totalCount : totalRecords;
+  const totalPages = Math.ceil(activeTotalCount / pageSize) || 1;
+
+  // Track how many pages are currently loaded locally
+  const loadedPages = Math.ceil(totalRecords / pageSize) || 1;
+
+  // Handle auto-paging transition when loadMore completes
+  useEffect(() => {
+    if (isAutoPaging) {
+      setIsAutoPaging(false);
+      setCurrentPage((p) => p + 1);
+    }
+  }, [clients.length, isAutoPaging]);
+
+  const handleNextPage = () => {
+    if (isAutoPaging) return;
+    if (currentPage === loadedPages) {
+      if (hasMore && loadMore) {
+        setIsAutoPaging(true);
+        loadMore();
+      }
+    } else if (currentPage < totalPages) {
+      setCurrentPage((p) => p + 1);
+    }
+  };
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalRecords);
+
+  const paginatedClients = useMemo(() => {
+    return sortedClients.slice(startIndex, endIndex);
+  }, [sortedClients, startIndex, endIndex]);
+
+  const isAdmin = user.role === "admin" || user.role === "super_admin";
 
   return (
     <Card>
@@ -150,7 +180,7 @@ export function ClientTable({
             )}
             <div className="ml-auto flex items-center gap-2">
               <CardTitle className="text-sm text-muted-foreground">
-                {sortedClients.length} of {clients.length} records
+                {sortedClients.length} of {totalCount !== null ? totalCount : clients.length} records
               </CardTitle>
               <Button
                 variant="secondary"
@@ -332,18 +362,12 @@ export function ClientTable({
             {/* Left: pagination info */}
             <div className="flex items-center gap-4">
               <span className="text-xs text-muted-foreground">
-                Showing {totalRecords === 0 ? 0 : startIndex + 1}–{endIndex} of {totalRecords} records
+                {hasAdvancedFilter || !!filters.search.trim() ? (
+                  `Showing ${totalRecords === 0 ? 0 : startIndex + 1}–${endIndex} of ${totalRecords} matching records (out of ${totalCount !== null ? totalCount : clients.length} total)`
+                ) : (
+                  `Showing ${totalRecords === 0 ? 0 : startIndex + 1}–${endIndex} of ${totalCount !== null ? totalCount : totalRecords} records`
+                )}
               </span>
-              {hasMore && loadMore && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={loadMore}
-                  className="h-8 text-xs font-semibold text-accent underline hover:bg-accent/5 hover:text-accent/80"
-                >
-                  Load more from server
-                </Button>
-              )}
             </div>
 
             {/* Right: navigation controls + page size selector */}
@@ -372,7 +396,7 @@ export function ClientTable({
                 <Button
                   variant="secondary"
                   size="sm"
-                  disabled={currentPage === 1}
+                  disabled={currentPage === 1 || isAutoPaging}
                   onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                 >
                   Previous
@@ -383,10 +407,10 @@ export function ClientTable({
                 <Button
                   variant="secondary"
                   size="sm"
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                  disabled={currentPage === totalPages || isAutoPaging}
+                  onClick={handleNextPage}
                 >
-                  Next
+                  {isAutoPaging ? "Loading..." : "Next"}
                 </Button>
               </div>
             </div>

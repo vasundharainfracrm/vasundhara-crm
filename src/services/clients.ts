@@ -7,6 +7,7 @@ import {
   serverTimestamp,
   Timestamp,
   where,
+  getCountFromServer,
   type Unsubscribe,
 } from "firebase/firestore";
 import { db, addDoc, getDoc, onSnapshot, updateDoc, deleteDoc } from "@/lib/firebase";
@@ -166,15 +167,20 @@ export function subscribeClient(clientId: string, callback: (client: Client | nu
 export function subscribeDeletedClients(user: AppUser, callback: (clients: Client[]) => void): Unsubscribe {
   const constraints =
     user.role === "admin" || user.role === "super_admin"
-      ? [where("deletedAt", ">=", new Timestamp(0, 0))]
-      : [where("assignedUserId", "==", user.uid), where("deletedAt", ">=", new Timestamp(0, 0))];
+      ? [where("deletedAt", ">=", new Timestamp(0, 0)), orderBy("deletedAt", "desc"), limit(200)]
+      : [
+          where("assignedUserId", "==", user.uid),
+          where("deletedAt", ">=", new Timestamp(0, 0)),
+          orderBy("deletedAt", "desc"),
+          limit(200)
+        ];
 
   return onSnapshot(query(collection(db, "clients"), ...constraints), (snapshot) => {
     let items = snapshot.docs.map((item) => ({ clientId: item.id, ...item.data() }) as Client);
     if (!user.isGhost) {
       items = items.filter((c) => !c.isGhost);
     }
-    // Sort client-side by deletedAt desc
+    // Sort client-side by deletedAt desc (as a secondary guarantee)
     items.sort((a, b) => {
       const aTime = a.deletedAt?.toMillis?.() ?? 0;
       const bTime = b.deletedAt?.toMillis?.() ?? 0;
@@ -182,6 +188,29 @@ export function subscribeDeletedClients(user: AppUser, callback: (clients: Clien
     });
     callback(items);
   });
+}
+
+export async function getClientsTotalCount(user: AppUser): Promise<number> {
+  const isDocAdmin = user.role === "admin" || user.role === "super_admin";
+  
+  const baseQuery = isDocAdmin
+    ? collection(db, "clients")
+    : query(collection(db, "clients"), where("assignedUserId", "==", user.uid));
+    
+  const deletedQuery = isDocAdmin
+    ? query(collection(db, "clients"), where("deletedAt", ">=", new Timestamp(0, 0)))
+    : query(
+        collection(db, "clients"),
+        where("assignedUserId", "==", user.uid),
+        where("deletedAt", ">=", new Timestamp(0, 0))
+      );
+
+  const [totalSnap, deletedSnap] = await Promise.all([
+    getCountFromServer(baseQuery),
+    getCountFromServer(deletedQuery),
+  ]);
+
+  return Math.max(0, totalSnap.data().count - deletedSnap.data().count);
 }
 
 export async function restoreClient(clientId: string, clientName: string, user: AppUser) {

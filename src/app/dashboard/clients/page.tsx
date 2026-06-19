@@ -31,6 +31,7 @@ export default function ClientsPage() {
     resetFilters,
     loadMore,
     hasMore,
+    totalCount,
   } = useClients(user);
 
   const [view, setView] = useState<ViewMode>("table");
@@ -73,6 +74,7 @@ export default function ClientsPage() {
     resetFilters,
     loadMore,
     hasMore,
+    totalCount,
   };
 
   return (

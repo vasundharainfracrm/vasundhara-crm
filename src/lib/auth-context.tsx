@@ -66,6 +66,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    import("@/lib/firestore-guard").then(({ setBypassRole }) => {
+      setBypassRole(user?.role || null);
+    }).catch((err) => console.error("Failed to set bypass role:", err));
+  }, [user]);
+
   const login = useCallback(async (email: string, password: string): Promise<AppUser | null> => {
     setLoading(true);
     await setPersistence(auth, browserLocalPersistence);

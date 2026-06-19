@@ -32,6 +32,7 @@ export default function AdminClientsPage() {
     resetFilters,
     loadMore,
     hasMore,
+    totalCount,
   } = useClients(user);
   const { employees } = useEmployees(
     Boolean(user?.role === "admin" || user?.role === "super_admin"),
@@ -78,6 +79,7 @@ export default function AdminClientsPage() {
     resetFilters,
     loadMore,
     hasMore,
+    totalCount,
   };
 
   return (
