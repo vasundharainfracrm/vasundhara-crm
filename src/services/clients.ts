@@ -10,6 +10,7 @@ import {
   getCountFromServer,
   type Unsubscribe,
 } from "firebase/firestore";
+import { onSnapshot as firestoreOnSnapshot } from "firebase/firestore";
 import { db, addDoc, getDoc, onSnapshot, updateDoc, deleteDoc } from "@/lib/firebase";
 import type { AppUser, Client, ClientFormValues } from "@/types";
 import { normalizePhone, toISTDateString } from "@/lib/utils";
@@ -143,10 +144,14 @@ export function subscribeClients(
   limitCount: number,
   callback: (clients: Client[], rawCount: number) => void
 ): Unsubscribe {
-  const constraints =
-    user.role === "admin" || user.role === "super_admin"
-      ? [orderBy("createdAt", "desc"), limit(limitCount)]
-      : [where("assignedUserId", "==", user.uid), orderBy("createdAt", "desc"), limit(limitCount)];
+  const isAdmin = user.role === "admin" || user.role === "super_admin";
+
+  // Admins: paginate the full collection (limitCount grows via loadMore).
+  // Employees: NO limit — their query is already scoped to their own UID,
+  // so removing the cap makes all their leads visible without safety risk.
+  const constraints = isAdmin
+    ? [orderBy("createdAt", "desc"), limit(limitCount)]
+    : [where("assignedUserId", "==", user.uid), orderBy("createdAt", "desc")];
 
   return onSnapshot(query(collection(db, "clients"), ...constraints), (snapshot) => {
     const rawCount = snapshot.docs.length;
@@ -155,6 +160,30 @@ export function subscribeClients(
       items = items.filter((c) => !c.isGhost);
     }
     callback(items, rawCount);
+  });
+}
+
+/**
+ * Subscribe to ALL leads assigned to a specific employee UID — no pagination limit.
+ * Used by admins when they select a specific employee in the "Assigned To" filter
+ * so results come from Firestore directly instead of being sliced from the
+ * paginated admin snapshot.
+ */
+export function subscribeClientsByEmployee(
+  assignedUserId: string,
+  callback: (clients: Client[]) => void
+): Unsubscribe {
+  const q = query(
+    collection(db, "clients"),
+    where("assignedUserId", "==", assignedUserId),
+    orderBy("createdAt", "desc")
+  );
+
+  return firestoreOnSnapshot(q, (snapshot) => {
+    const items = snapshot.docs
+      .map((item) => ({ clientId: item.id, ...item.data() }) as Client)
+      .filter((c) => !c.deletedAt && !c.isGhost);
+    callback(items);
   });
 }
 
@@ -167,12 +196,12 @@ export function subscribeClient(clientId: string, callback: (client: Client | nu
 export function subscribeDeletedClients(user: AppUser, callback: (clients: Client[]) => void): Unsubscribe {
   const constraints =
     user.role === "admin" || user.role === "super_admin"
-      ? [where("deletedAt", ">=", new Timestamp(0, 0)), orderBy("deletedAt", "desc"), limit(200)]
+      ? [where("deletedAt", ">=", new Timestamp(0, 0)), orderBy("deletedAt", "desc"), limit(500)]
       : [
           where("assignedUserId", "==", user.uid),
           where("deletedAt", ">=", new Timestamp(0, 0)),
           orderBy("deletedAt", "desc"),
-          limit(200)
+          limit(500)
         ];
 
   return onSnapshot(query(collection(db, "clients"), ...constraints), (snapshot) => {
@@ -244,5 +273,40 @@ export async function permanentDeleteClient(clientId: string, clientName: string
     targetId: clientId,
     details: `Permanently deleted client ${clientName}`,
     isGhost: user.isGhost || false,
+  });
+}
+
+/**
+ * Subscribe to clients created within a specific date range.
+ * Query filters and orders on the 'createdAt' field, leveraging automatic single-field indexes.
+ * Filters out deleted clients and ghosts (if viewer is not a ghost) client-side.
+ */
+export function subscribeClientsByDateRange(
+  viewer: AppUser,
+  startDate: Date | null,
+  endDate: Date | null,
+  callback: (clients: Client[]) => void
+): Unsubscribe {
+  const constraints: any[] = [];
+  
+  if (startDate) {
+    constraints.push(where("createdAt", ">=", Timestamp.fromDate(startDate)));
+  }
+  if (endDate) {
+    constraints.push(where("createdAt", "<=", Timestamp.fromDate(endDate)));
+  }
+  
+  constraints.push(orderBy("createdAt", "desc"));
+
+  const q = query(collection(db, "clients"), ...constraints);
+
+  return firestoreOnSnapshot(q, (snapshot) => {
+    let items = snapshot.docs.map((item) => ({ clientId: item.id, ...item.data() }) as Client);
+    if (!viewer.isGhost) {
+      items = items.filter((c) => !c.isGhost);
+    }
+    // Filter out deleted clients
+    items = items.filter((c) => !c.deletedAt);
+    callback(items);
   });
 }

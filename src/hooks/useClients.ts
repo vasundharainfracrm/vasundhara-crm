@@ -31,7 +31,7 @@ const defaultFilters: ClientFilters = {
 };
 
 export function useClients(user: AppUser | null) {
-  const { clients, loading, loadMore, hasMore, limitCount, totalCount } = useClientsContext();
+  const { clients, loading, loadMore, hasMore, limitCount, totalCount, setAssignedUserIdFilter, assignedUserIdFilter } = useClientsContext();
   const [filters, setFilters] = useState<ClientFilters>(defaultFilters);
 
   const filteredClients = useMemo(() => {
@@ -46,7 +46,9 @@ export function useClients(user: AppUser | null) {
       if (filters.priority !== "all" && client.priority !== filters.priority) return false;
       if (filters.leadSource !== "all" && client.leadSource !== filters.leadSource) return false;
       if (filters.propertyType !== "all" && client.propertyType !== filters.propertyType) return false;
-      if (filters.assignedUserId !== "all" && client.assignedUserId !== filters.assignedUserId) return false;
+      // Note: assignedUserId filtering is handled at the Firestore listener level via
+      // setAssignedUserIdFilter — not here — so that ALL leads for that employee are returned,
+      // not just the first 200 loaded in the paginated admin view.
       if (budgetMin !== null && client.budget < budgetMin) return false;
       if (budgetMax !== null && client.budget > budgetMax) return false;
       if (followUpFrom || followUpTo) {
@@ -125,6 +127,12 @@ export function useClients(user: AppUser | null) {
     setFilters((prev) => ({ ...prev, propertyType: value }));
   }
   function setAssignedUserId(value: string) {
+    // Push the filter to the Firestore listener layer, not local state.
+    // This ensures ALL leads for that employee are fetched, not just the
+    // first 200 from the paginated admin snapshot.
+    const uid = value === "all" ? null : value;
+    setAssignedUserIdFilter(uid);
+    // Keep local filter state in sync so the dropdown reflects the selection
     setFilters((prev) => ({ ...prev, assignedUserId: value }));
   }
   function setBudgetMin(value: string) {
@@ -141,6 +149,8 @@ export function useClients(user: AppUser | null) {
   }
   function resetFilters() {
     setFilters(defaultFilters);
+    // Also clear the Firestore-level employee filter so the paginated listener is restored
+    setAssignedUserIdFilter(null);
   }
 
   return {
@@ -164,5 +174,6 @@ export function useClients(user: AppUser | null) {
     hasMore,
     limitCount,
     totalCount,
+    assignedUserIdFilter,
   };
 }

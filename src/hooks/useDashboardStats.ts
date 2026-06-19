@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { collection, query, where, getCountFromServer, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { AppUser, Client } from "@/types";
+import { leadStatuses, type AppUser, type Client, type LeadStatus } from "@/types";
 
 const ACTIVE_STATUSES = ["new_lead", "contacted", "interested", "site_visit_scheduled", "negotiation"];
 
@@ -15,6 +15,7 @@ export type DashboardMetrics = {
   overdueFollowUps: number;
   newLeadsToday: number;
   conversionRate: number;
+  statusCounts: Record<LeadStatus, number>;
 };
 
 const defaultMetrics: DashboardMetrics = {
@@ -25,6 +26,10 @@ const defaultMetrics: DashboardMetrics = {
   overdueFollowUps: 0,
   newLeadsToday: 0,
   conversionRate: 0,
+  statusCounts: leadStatuses.reduce((acc, s) => {
+    acc[s] = 0;
+    return acc;
+  }, {} as Record<LeadStatus, number>),
 };
 
 async function getCount(q: any): Promise<number> {
@@ -72,8 +77,17 @@ export function useDashboardStats(
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
 
-    const activeLeads = clientsList.filter((c) => c.leadStatus !== "closed" && c.leadStatus !== "not_interested").length;
-    const closedLeads = clientsList.filter((c) => c.leadStatus === "closed").length;
+    const statusCounts = leadStatuses.reduce((acc, status) => {
+      acc[status] = clientsList.filter((c) => c.leadStatus === status).length;
+      return acc;
+    }, {} as Record<LeadStatus, number>);
+
+    const activeLeads = leadStatuses
+      .filter((s) => s !== "closed" && s !== "not_interested")
+      .reduce((sum, s) => sum + (statusCounts[s] ?? 0), 0);
+
+    const closedLeads = statusCounts.closed ?? 0;
+
     const todayFollowUps = clientsList.filter((c) => {
       const due = c.followUpDate?.toDate?.();
       return due && due >= todayStart && due <= todayEnd;
@@ -86,16 +100,18 @@ export function useDashboardStats(
       const created = c.createdAt?.toDate?.();
       return created && created >= todayStart && created <= todayEnd;
     }).length;
-    const conversionRate = clientsList.length > 0 ? Math.round((closedLeads / clientsList.length) * 100) : 0;
+    const total = clientsList.length;
+    const conversionRate = total > 0 ? Math.round((closedLeads / total) * 100) : 0;
 
     return {
-      total: clientsList.length,
+      total,
       activeLeads,
       closedLeads,
       todayFollowUps,
       overdueFollowUps,
       newLeadsToday,
       conversionRate,
+      statusCounts,
     };
   }, []);
 
@@ -108,17 +124,11 @@ export function useDashboardStats(
       // Base query setup depending on role
       const isAdmin = currentUser.role === "admin" || currentUser.role === "super_admin";
       
-      const baseTotalQuery = isAdmin
-        ? collection(db, "clients")
-        : query(collection(db, "clients"), where("assignedUserId", "==", currentUser.uid));
-
-      const baseActiveQuery = isAdmin
-        ? query(collection(db, "clients"), where("leadStatus", "in", ACTIVE_STATUSES))
-        : query(collection(db, "clients"), where("assignedUserId", "==", currentUser.uid), where("leadStatus", "in", ACTIVE_STATUSES));
-
-      const baseClosedQuery = isAdmin
-        ? query(collection(db, "clients"), where("leadStatus", "==", "closed"))
-        : query(collection(db, "clients"), where("assignedUserId", "==", currentUser.uid), where("leadStatus", "==", "closed"));
+      const statusQueries = leadStatuses.map((status) => {
+        return isAdmin
+          ? query(collection(db, "clients"), where("leadStatus", "==", status))
+          : query(collection(db, "clients"), where("assignedUserId", "==", currentUser.uid), where("leadStatus", "==", status));
+      });
 
       const baseNewTodayQuery = isAdmin
         ? query(collection(db, "clients"), where("createdAt", ">=", Timestamp.fromDate(todayStart)), where("createdAt", "<=", Timestamp.fromDate(todayEnd)))
@@ -134,21 +144,29 @@ export function useDashboardStats(
 
       // Run count queries in parallel
       const [
-        total,
-        activeLeads,
-        closedLeads,
+        countsList,
         newLeadsToday,
         todayFollowUps,
         overdueFollowUps
       ] = await Promise.all([
-        getTrueCount(currentUser, baseTotalQuery),
-        getTrueCount(currentUser, baseActiveQuery),
-        getTrueCount(currentUser, baseClosedQuery),
+        Promise.all(statusQueries.map((q) => getTrueCount(currentUser, q))),
         getTrueCount(currentUser, baseNewTodayQuery),
         getTrueCount(currentUser, baseTodayFollowUpsQuery),
         getTrueCount(currentUser, baseOverdueFollowUpsQuery),
       ]);
 
+      const statusCounts = leadStatuses.reduce((acc, status, idx) => {
+        acc[status] = countsList[idx];
+        return acc;
+      }, {} as Record<LeadStatus, number>);
+
+      const total = leadStatuses.reduce((sum, s) => sum + (statusCounts[s] ?? 0), 0);
+      
+      const activeLeads = leadStatuses
+        .filter((s) => s !== "closed" && s !== "not_interested")
+        .reduce((sum, s) => sum + (statusCounts[s] ?? 0), 0);
+
+      const closedLeads = statusCounts.closed ?? 0;
       const conversionRate = total > 0 ? Math.round((closedLeads / total) * 100) : 0;
 
       setMetrics({
@@ -159,6 +177,7 @@ export function useDashboardStats(
         overdueFollowUps,
         newLeadsToday,
         conversionRate,
+        statusCounts,
       });
       setError(null);
       setHasFetchedServer(true);

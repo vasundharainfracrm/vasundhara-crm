@@ -2,13 +2,27 @@
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { leadStatusLabels, leadStatuses, type Client } from "@/types";
+import { leadStatusLabels, leadStatuses, type Client, type LeadStatus } from "@/types";
 
-export function LeadStatusChart({ clients }: { clients: Client[] }) {
-  const data = leadStatuses.map((status) => ({
-    status: leadStatusLabels[status],
-    leads: clients.filter((client) => client.leadStatus === status).length,
-  }));
+export function LeadStatusChart({
+  clients,
+  statusCounts,
+}: {
+  clients?: Client[];
+  statusCounts?: Record<LeadStatus, number>;
+}) {
+  const data = leadStatuses.map((status) => {
+    let count = 0;
+    if (statusCounts) {
+      count = statusCounts[status] ?? 0;
+    } else if (clients) {
+      count = clients.filter((client) => client.leadStatus === status).length;
+    }
+    return {
+      status: leadStatusLabels[status],
+      leads: count,
+    };
+  });
 
   return (
     <Card>

@@ -37,7 +37,7 @@ export default function AdminDashboardPage() {
 
         {/* Charts */}
         <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
-          <LeadStatusChart clients={clients} />
+          <LeadStatusChart clients={clients} statusCounts={metrics.statusCounts} />
           <RecentActivityFeed clients={clients} />
         </div>
       </div>

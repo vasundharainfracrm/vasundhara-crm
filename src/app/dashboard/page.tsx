@@ -25,7 +25,7 @@ export default function DashboardPage() {
           <StatCard label="Overdue Follow-ups" value={metrics.overdueFollowUps} helper="Needs attention" />
         </div>
         <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
-          <LeadStatusChart clients={clients} />
+          <LeadStatusChart clients={clients} statusCounts={metrics.statusCounts} />
           <RecentActivityFeed clients={clients} />
         </div>
       </div>

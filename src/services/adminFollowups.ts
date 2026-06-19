@@ -1,6 +1,5 @@
 import {
   collection,
-  limit,
   orderBy,
   query,
   where,
@@ -23,7 +22,6 @@ export function subscribeAllFollowUpClients(
       collection(db, "clients"),
       where("followUpDate", "!=", null),
       orderBy("followUpDate", "asc"),
-      limit(2000),
     ),
     (snapshot) => {
       let items = snapshot.docs
@@ -96,7 +94,6 @@ export function subscribeFollowUpClients(
       collection(db, "clients"),
       where("followUpDate", "!=", null),
       orderBy("followUpDate", "asc"),
-      limit(2000),
     ),
     (snapshot) => {
       latestClients = snapshot.docs

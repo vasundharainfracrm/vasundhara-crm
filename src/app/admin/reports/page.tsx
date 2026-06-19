@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TopBar } from "@/components/layout/TopBar";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { LeadFunnelChart } from "@/components/reports/LeadFunnelChart";
@@ -11,20 +11,50 @@ import { PriorityTrendChart } from "@/components/reports/PriorityTrendChart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { DatePicker } from "@/components/ui/date-picker";
-import { useClients } from "@/hooks/useClients";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuth } from "@/lib/auth-context";
+import { subscribeClientsByDateRange } from "@/services/clients";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { Client } from "@/types";
+import { subMonths, format, startOfMonth } from "date-fns";
 
 export default function ReportsPage() {
   const { user } = useAuth();
-  const { clients } = useClients(user);
   const { employees } = useEmployees(true);
 
-  const [from, setFrom] = useState("");
+  const defaultFrom = useMemo(() => {
+    const d = subMonths(new Date(), 5);
+    return format(new Date(d.getFullYear(), d.getMonth(), 1), "yyyy-MM-dd");
+  }, []);
+
+  const [from, setFrom] = useState(defaultFrom);
   const [to, setTo] = useState("");
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    setLoading(true);
+
+    const sixMonthsAgo = startOfMonth(subMonths(new Date(), 5));
+    const selectedFromDate = from ? new Date(`${from}T00:00:00`) : null;
+    
+    // Always query from at least 6 months ago to ensure trend lines show full history
+    const queryStartDate = selectedFromDate 
+      ? (selectedFromDate < sixMonthsAgo ? selectedFromDate : sixMonthsAgo) 
+      : sixMonthsAgo;
+      
+    const queryEndDate = to ? new Date(`${to}T23:59:59`) : null;
+
+    const unsub = subscribeClientsByDateRange(user, queryStartDate, queryEndDate, (items) => {
+      setClients(items);
+      setLoading(false);
+    });
+
+    return unsub;
+  }, [user, from, to]);
 
   const filteredClients = useMemo(() => {
-    if (!from && !to) return clients;
     return clients.filter((c) => {
       const created = c.createdAt?.toDate?.();
       if (!created) return true;
@@ -43,6 +73,64 @@ export default function ReportsPage() {
   const conversionRate = total > 0 ? Math.round((closed / total) * 100) : 0;
   const highPriority = filteredClients.filter((c) => c.priority === "high").length;
   const activeEmployees = employees.filter((e) => e.status === "active").length;
+
+  if (loading) {
+    return (
+      <>
+        <TopBar title="Reports" mode="admin" />
+        <div className="space-y-6 p-4 lg:p-8">
+          {/* Skeleton Filter Card */}
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-64 mt-2" />
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-4">
+                <Skeleton className="h-10 w-44 rounded-lg" />
+                <Skeleton className="h-10 w-44 rounded-lg" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Skeleton KPIs */}
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i}>
+                <CardHeader className="pb-2">
+                  <Skeleton className="h-4 w-20" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-3 w-24 mt-2" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Skeleton Row 2 */}
+          <div className="grid gap-6 xl:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-6 w-32" />
+              </CardHeader>
+              <CardContent className="flex items-center justify-center min-h-[280px]">
+                <Skeleton className="h-48 w-48 rounded-full" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-6 w-48" />
+              </CardHeader>
+              <CardContent className="min-h-[260px]">
+                <Skeleton className="h-full w-full rounded-lg animate-pulse" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -66,9 +154,9 @@ export default function ReportsPage() {
               <Field label="To">
                 <DatePicker value={to} onChange={setTo} placeholder="End Date" className="w-44" />
               </Field>
-              {(from || to) && (
+              {(from !== defaultFrom || to !== "") && (
                 <button
-                  onClick={() => { setFrom(""); setTo(""); }}
+                  onClick={() => { setFrom(defaultFrom); setTo(""); }}
                   className="mb-0.5 text-xs text-muted-foreground underline hover:text-foreground"
                 >
                   Clear filter
