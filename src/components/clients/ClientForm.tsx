@@ -76,6 +76,13 @@ export function ClientForm({ client, inline = false, onDirtyChange, submitRef, r
   const [duplicateOwner, setDuplicateOwner] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
   const isEdit = Boolean(client?.clientId);
+  const isEmployeeEdit = isEdit && user?.role === "employee";
+
+  const handleCoreFieldClick = () => {
+    if (isEmployeeEdit) {
+      toast.error("Please contact admin or super admin to make changes to core lead details.");
+    }
+  };
 
   const {
     register,
@@ -144,10 +151,33 @@ export function ClientForm({ client, inline = false, onDirtyChange, submitRef, r
         toast.success("Client created.");
         router.push(adminMode ? `/admin/clients/${id}` : `/dashboard/clients/${id}`);
       } else if (client) {
-        await updateClient(client.clientId, values, user);
+        // Safe-guard: If employee is editing, preserve original core details
+        const finalValues = isEmployeeEdit
+          ? {
+              ...values,
+              fullName: client.fullName,
+              primaryMobile: client.primaryMobile,
+              alternateMobile: client.alternateMobile || "",
+              email: client.email || "",
+              city: client.city || "",
+              address: client.address || "",
+              propertyType: client.propertyType,
+              budget: client.budget || 0,
+              preferredLocation: client.preferredLocation || "",
+              bhkRequirement: client.bhkRequirement,
+              purpose: client.purpose,
+              leadSource: client.leadSource,
+              dealers: client.dealers || [],
+              createdAt: client.createdAt?.toDate
+                ? toISTDateString(client.createdAt.toDate())
+                : values.createdAt,
+            }
+          : values;
+
+        await updateClient(client.clientId, finalValues, user);
         toast.success("Client updated.");
         // Reset dirty state after successful save
-        reset(values);
+        reset(finalValues);
         if (!inline) {
           router.push(
             user.role === "admin"
@@ -182,24 +212,36 @@ export function ClientForm({ client, inline = false, onDirtyChange, submitRef, r
             <CardDescription>Identity and contact details for duplicate-safe ownership.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <Field label="Full name" error={errors.fullName?.message}>
-              <Input {...register("fullName")} />
-            </Field>
-            <Field label="Primary mobile" error={errors.primaryMobile?.message}>
-              <Input {...register("primaryMobile")} />
-            </Field>
-            <Field label="Alternate mobile" error={errors.alternateMobile?.message}>
-              <Input {...register("alternateMobile")} />
-            </Field>
-            <Field label="Email" error={errors.email?.message}>
-              <Input type="email" {...register("email")} />
-            </Field>
-            <Field label="City" error={errors.city?.message}>
-              <Input {...register("city")} />
-            </Field>
-            <Field label="Address" error={errors.address?.message}>
-              <Input {...register("address")} />
-            </Field>
+            <div onClick={handleCoreFieldClick} className={isEmployeeEdit ? "cursor-not-allowed" : ""}>
+              <Field label="Full name" error={errors.fullName?.message}>
+                <Input {...register("fullName")} readOnly={isEmployeeEdit} className={isEmployeeEdit ? "pointer-events-none opacity-80" : ""} />
+              </Field>
+            </div>
+            <div onClick={handleCoreFieldClick} className={isEmployeeEdit ? "cursor-not-allowed" : ""}>
+              <Field label="Primary mobile" error={errors.primaryMobile?.message}>
+                <Input {...register("primaryMobile")} readOnly={isEmployeeEdit} className={isEmployeeEdit ? "pointer-events-none opacity-80" : ""} />
+              </Field>
+            </div>
+            <div onClick={handleCoreFieldClick} className={isEmployeeEdit ? "cursor-not-allowed" : ""}>
+              <Field label="Alternate mobile" error={errors.alternateMobile?.message}>
+                <Input {...register("alternateMobile")} readOnly={isEmployeeEdit} className={isEmployeeEdit ? "pointer-events-none opacity-80" : ""} />
+              </Field>
+            </div>
+            <div onClick={handleCoreFieldClick} className={isEmployeeEdit ? "cursor-not-allowed" : ""}>
+              <Field label="Email" error={errors.email?.message}>
+                <Input type="email" {...register("email")} readOnly={isEmployeeEdit} className={isEmployeeEdit ? "pointer-events-none opacity-80" : ""} />
+              </Field>
+            </div>
+            <div onClick={handleCoreFieldClick} className={isEmployeeEdit ? "cursor-not-allowed" : ""}>
+              <Field label="City" error={errors.city?.message}>
+                <Input {...register("city")} readOnly={isEmployeeEdit} className={isEmployeeEdit ? "pointer-events-none opacity-80" : ""} />
+              </Field>
+            </div>
+            <div onClick={handleCoreFieldClick} className={isEmployeeEdit ? "cursor-not-allowed" : ""}>
+              <Field label="Address" error={errors.address?.message}>
+                <Input {...register("address")} readOnly={isEmployeeEdit} className={isEmployeeEdit ? "pointer-events-none opacity-80" : ""} />
+              </Field>
+            </div>
           </CardContent>
         </Card>
 
@@ -209,36 +251,46 @@ export function ClientForm({ client, inline = false, onDirtyChange, submitRef, r
             <CardDescription>Capture what the client is looking for.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <Field label="Property type" error={errors.propertyType?.message}>
-              <Select {...register("propertyType")}>
-                <option>Flat</option>
-                <option>Villa</option>
-                <option>Plot</option>
-                <option>Commercial</option>
-              </Select>
-            </Field>
-            <Field label="Budget (₹)" error={errors.budget?.message}>
-              <Input type="number" min={0} {...register("budget")} />
-            </Field>
-            <Field label="Preferred location" error={errors.preferredLocation?.message}>
-              <Input {...register("preferredLocation")} />
-            </Field>
-            <Field label="BHK requirement" error={errors.bhkRequirement?.message}>
-              <Select {...register("bhkRequirement")}>
-                <option>1 BHK</option>
-                <option>2 BHK</option>
-                <option>3 BHK</option>
-                <option>4+ BHK</option>
-                <option>Not applicable</option>
-              </Select>
-            </Field>
-            <Field label="Purpose" error={errors.purpose?.message}>
-              <Select {...register("purpose")}>
-                <option value="buy">Buy</option>
-                <option value="rent">Rent</option>
-                <option value="investment">Investment</option>
-              </Select>
-            </Field>
+            <div onClick={handleCoreFieldClick} className={isEmployeeEdit ? "cursor-not-allowed" : ""}>
+              <Field label="Property type" error={errors.propertyType?.message}>
+                <Select {...register("propertyType")} disabled={isEmployeeEdit} className={isEmployeeEdit ? "pointer-events-none opacity-80" : ""}>
+                  <option>Flat</option>
+                  <option>Villa</option>
+                  <option>Plot</option>
+                  <option>Commercial</option>
+                </Select>
+              </Field>
+            </div>
+            <div onClick={handleCoreFieldClick} className={isEmployeeEdit ? "cursor-not-allowed" : ""}>
+              <Field label="Budget (₹)" error={errors.budget?.message}>
+                <Input type="number" min={0} {...register("budget")} readOnly={isEmployeeEdit} className={isEmployeeEdit ? "pointer-events-none opacity-80" : ""} />
+              </Field>
+            </div>
+            <div onClick={handleCoreFieldClick} className={isEmployeeEdit ? "cursor-not-allowed" : ""}>
+              <Field label="Preferred location" error={errors.preferredLocation?.message}>
+                <Input {...register("preferredLocation")} readOnly={isEmployeeEdit} className={isEmployeeEdit ? "pointer-events-none opacity-80" : ""} />
+              </Field>
+            </div>
+            <div onClick={handleCoreFieldClick} className={isEmployeeEdit ? "cursor-not-allowed" : ""}>
+              <Field label="BHK requirement" error={errors.bhkRequirement?.message}>
+                <Select {...register("bhkRequirement")} disabled={isEmployeeEdit} className={isEmployeeEdit ? "pointer-events-none opacity-80" : ""}>
+                  <option>1 BHK</option>
+                  <option>2 BHK</option>
+                  <option>3 BHK</option>
+                  <option>4+ BHK</option>
+                  <option>Not applicable</option>
+                </Select>
+              </Field>
+            </div>
+            <div onClick={handleCoreFieldClick} className={isEmployeeEdit ? "cursor-not-allowed" : ""}>
+              <Field label="Purpose" error={errors.purpose?.message}>
+                <Select {...register("purpose")} disabled={isEmployeeEdit} className={isEmployeeEdit ? "pointer-events-none opacity-80" : ""}>
+                  <option value="buy">Buy</option>
+                  <option value="rent">Rent</option>
+                  <option value="investment">Investment</option>
+                </Select>
+              </Field>
+            </div>
           </CardContent>
         </Card>
 
@@ -248,16 +300,18 @@ export function ClientForm({ client, inline = false, onDirtyChange, submitRef, r
             <CardDescription>Status, priority, and next action.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <Field label="Lead source" error={errors.leadSource?.message}>
-              <Select {...register("leadSource")}>
-                <option>Walk-in</option>
-                <option>Online</option>
-                <option>Referral</option>
-                <option>Social</option>
-                <option>Dealer</option>
-                <option>Other</option>
-              </Select>
-            </Field>
+            <div onClick={handleCoreFieldClick} className={isEmployeeEdit ? "cursor-not-allowed" : ""}>
+              <Field label="Lead source" error={errors.leadSource?.message}>
+                <Select {...register("leadSource")} disabled={isEmployeeEdit} className={isEmployeeEdit ? "pointer-events-none opacity-80" : ""}>
+                  <option>Walk-in</option>
+                  <option>Online</option>
+                  <option>Referral</option>
+                  <option>Social</option>
+                  <option>Dealer</option>
+                  <option>Other</option>
+                </Select>
+              </Field>
+            </div>
             <Field label="Lead status" error={errors.leadStatus?.message}>
               <Select {...register("leadStatus")}>
                 {Object.entries(leadStatusLabels).map(([value, label]) => (
@@ -285,19 +339,22 @@ export function ClientForm({ client, inline = false, onDirtyChange, submitRef, r
                 )}
               />
             </Field>
-            <Field label="Lead Created Date" error={errors.createdAt?.message}>
-              <Controller
-                control={control}
-                name="createdAt"
-                render={({ field }) => (
-                  <DatePicker 
-                    value={field.value} 
-                    onChange={field.onChange} 
-                    disabledDates={{ after: new Date() }}
-                  />
-                )}
-              />
-            </Field>
+            <div onClick={handleCoreFieldClick} className={isEmployeeEdit ? "cursor-not-allowed" : ""}>
+              <Field label="Lead Created Date" error={errors.createdAt?.message}>
+                <Controller
+                  control={control}
+                  name="createdAt"
+                  render={({ field }) => (
+                    <DatePicker 
+                      value={field.value} 
+                      onChange={field.onChange} 
+                      disabledDates={{ after: new Date() }}
+                      disabled={isEmployeeEdit}
+                    />
+                  )}
+                />
+              </Field>
+            </div>
 
             {/* ── Dealer multi-input — visible only when Lead Source = "Dealer" ── */}
             {leadSource === "Dealer" && (
@@ -307,16 +364,18 @@ export function ClientForm({ client, inline = false, onDirtyChange, submitRef, r
                     Dealers
                     <span className="ml-1 text-xs text-muted-foreground">(at least one required)</span>
                   </p>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={addDealer}
-                    className="gap-1.5"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Add Dealer
-                  </Button>
+                  {!isEmployeeEdit && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={addDealer}
+                      className="gap-1.5"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add Dealer
+                    </Button>
+                  )}
                 </div>
 
                 {dealers.length === 0 && (
@@ -328,25 +387,30 @@ export function ClientForm({ client, inline = false, onDirtyChange, submitRef, r
                 <div className="space-y-2">
                   {dealers.map((dealerName, index) => (
                     <div key={index} className="flex items-center gap-2">
-                      <Input
-                        id={`dealer-input-${index}`}
-                        placeholder={`Dealer name ${index + 1}`}
-                        value={dealerName}
-                        onChange={(e) => {
-                          const updated = [...dealers];
-                          updated[index] = e.target.value;
-                          setValue("dealers", updated, { shouldDirty: true });
-                        }}
-                        className="flex-1"
-                      />
-                      <button
-                        type="button"
-                        title="Remove dealer"
-                        onClick={() => removeDealer(index)}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+                      <div onClick={handleCoreFieldClick} className={isEmployeeEdit ? "flex-1 cursor-not-allowed" : "flex-1"}>
+                        <Input
+                          id={`dealer-input-${index}`}
+                          placeholder={`Dealer name ${index + 1}`}
+                          value={dealerName}
+                          readOnly={isEmployeeEdit}
+                          onChange={(e) => {
+                            const updated = [...dealers];
+                            updated[index] = e.target.value;
+                            setValue("dealers", updated, { shouldDirty: true });
+                          }}
+                          className={isEmployeeEdit ? "pointer-events-none opacity-80" : ""}
+                        />
+                      </div>
+                      {!isEmployeeEdit && (
+                        <button
+                          type="button"
+                          title="Remove dealer"
+                          onClick={() => removeDealer(index)}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>

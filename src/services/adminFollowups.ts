@@ -26,7 +26,7 @@ export function subscribeAllFollowUpClients(
     (snapshot) => {
       let items = snapshot.docs
         .map((d) => ({ clientId: d.id, ...d.data() }) as Client)
-        .filter((c) => !c.deletedAt);
+        .filter((c) => !c.deletedAt && c.leadStatus !== "closed" && c.leadStatus !== "not_interested");
       if (!viewer.isGhost) {
         items = items.filter((c) => !c.isGhost);
       }
@@ -98,7 +98,7 @@ export function subscribeFollowUpClients(
     (snapshot) => {
       latestClients = snapshot.docs
         .map((d) => ({ clientId: d.id, ...d.data() }) as Client)
-        .filter((c) => !c.deletedAt);
+        .filter((c) => !c.deletedAt && c.leadStatus !== "closed" && c.leadStatus !== "not_interested");
       clientsSettled = true;
       emit();
     },

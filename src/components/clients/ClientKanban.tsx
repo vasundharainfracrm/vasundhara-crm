@@ -47,7 +47,10 @@ function LeadCard({
 }) {
   const followUpDate = client.followUpDate?.toDate?.();
   const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
-  const isOverdue = followUpDate ? followUpDate < todayStart : false;
+  const isOverdue =
+    followUpDate && client.leadStatus !== "closed" && client.leadStatus !== "not_interested"
+      ? followUpDate < todayStart
+      : false;
 
   return (
     <div

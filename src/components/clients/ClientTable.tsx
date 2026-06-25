@@ -182,15 +182,17 @@ export function ClientTable({
               <CardTitle className="text-sm text-muted-foreground">
                 {sortedClients.length} of {totalCount !== null ? totalCount : clients.length} records
               </CardTitle>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => exportClientsCSV(sortedClients)}
-                title="Export visible clients as CSV"
-              >
-                <Download className="h-4 w-4" />
-                Export CSV
-              </Button>
+              {user.role !== "employee" && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => exportClientsCSV(sortedClients)}
+                  title="Export visible clients as CSV"
+                >
+                  <Download className="h-4 w-4" />
+                  Export CSV
+                </Button>
+              )}
             </div>
           </div>
 

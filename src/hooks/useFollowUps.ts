@@ -54,7 +54,7 @@ export function useMyFollowUps(user: AppUser | null) {
     // Derive follow-up rows from client.followUpDate — no dual-source, no duplicates.
     return subscribeClients(user, 2000, (clients) => {
       const withDate = clients
-        .filter((c) => c.followUpDate != null && !c.deletedAt)
+        .filter((c) => c.followUpDate != null && !c.deletedAt && c.leadStatus !== "closed" && c.leadStatus !== "not_interested")
         .map(clientToFollowUp);
       setFollowUps(withDate);
       setLoading(false);

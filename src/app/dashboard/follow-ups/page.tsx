@@ -180,7 +180,9 @@ function FollowUpRow({
 }) {
   const date = fu.nextFollowUpDate?.toDate?.();
   const todayStart = startOfToday();
-  const isOverdue = date ? isBefore(date, todayStart) && !isToday(date) : false;
+  const isOverdue = date && fu.status !== "closed" && fu.status !== "not_interested"
+    ? isBefore(date, todayStart) && !isToday(date)
+    : false;
   const isTodayDue = date ? isToday(date) : false;
   const pri = fu.priority ? priorityBadge[fu.priority] : null;
 

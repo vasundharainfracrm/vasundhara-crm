@@ -19,9 +19,10 @@ export interface DatePickerProps {
   className?: string;
   placeholder?: string;
   disabledDates?: any;
+  disabled?: boolean;
 }
 
-export function DatePicker({ value, onChange, className, placeholder = "Pick a date", disabledDates }: DatePickerProps) {
+export function DatePicker({ value, onChange, className, placeholder = "Pick a date", disabledDates, disabled }: DatePickerProps) {
   const [date, setDate] = React.useState<Date | undefined>(() => {
     if (value) {
       return typeof value === 'string' ? parseISO(value) : value;
@@ -51,6 +52,7 @@ export function DatePicker({ value, onChange, className, placeholder = "Pick a d
       <PopoverTrigger asChild>
         <Button
           variant={"secondary"}
+          disabled={disabled}
           className={cn(
             "w-full justify-start text-left font-normal",
             !date && "text-muted-foreground",
