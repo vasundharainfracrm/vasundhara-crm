@@ -127,8 +127,9 @@ service cloud.firestore {
 
     // ─── System Collection ───────────────────────────────────────────────────
     match /system/{documentId} {
-      // Any authenticated user can read system configuration.
-      allow read: if isAuth();
+      // Allow reading the billing switch document even without authentication
+      // so the app can check if requests are blocked immediately on load.
+      allow read: if documentId == "billing" || isAuth();
       // Only super_admin can write or update system configuration.
       allow write, update: if isSuperAdmin();
 
