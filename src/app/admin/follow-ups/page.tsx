@@ -333,12 +333,7 @@ export default function AdminFollowUpsPage() {
                         </TableCell>
                         <TableCell>
                           <Badge
-                            variant={
-                              c.leadStatus === "closed" ? "default"
-                                : c.leadStatus === "not_interested" ? "danger"
-                                  : c.leadStatus === "negotiation" || c.leadStatus === "site_visit_scheduled" ? "warning"
-                                    : "secondary"
-                            }
+                            variant={c.leadStatus as any}
                             className="text-[10px]"
                           >
                             {leadStatusLabels[c.leadStatus]}

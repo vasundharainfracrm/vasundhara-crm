@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LayoutGrid, Table2, Trash2 } from "lucide-react";
+import { AlertTriangle, LayoutGrid, Table2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { ClientTable } from "@/components/clients/ClientTable";
 import { ClientKanban } from "@/components/clients/ClientKanban";
@@ -96,14 +96,27 @@ export default function AdminClientsPage() {
       <div className="p-4 lg:p-8">
         {/* View toggle & Actions */}
         <div className="mb-4 flex items-center justify-between gap-1 flex-wrap">
-          <Link
-            id="clients-trash-link"
-            href="/admin/clients/trash"
-            className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all duration-150 hover:border-danger/30 hover:text-danger"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            Recently Deleted
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              id="clients-trash-link"
+              href="/admin/clients/trash"
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all duration-150 hover:border-danger/30 hover:text-danger"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Recently Deleted
+            </Link>
+
+            {user?.role === "super_admin" && (
+              <Link
+                id="clients-unassigned-link"
+                href="/admin/clients/unassigned"
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all duration-150 hover:border-amber-500/30 hover:text-amber-600 dark:hover:text-amber-400"
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Unassigned Leads
+              </Link>
+            )}
+          </div>
 
           <div className="flex items-center gap-1">
             <button

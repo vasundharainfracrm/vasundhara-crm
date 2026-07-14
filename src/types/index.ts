@@ -72,6 +72,10 @@ export type Client = {
   deletedAt?: Timestamp | null;
   deletedById?: string | null;
   deletedByName?: string | null;
+  isOrphan?: boolean;
+  orphanedAt?: Timestamp | null;
+  /** Preserved name of the original owner when the employee was deleted. */
+  originalAssignedUserName?: string;
   isGhost?: boolean;
 };
 

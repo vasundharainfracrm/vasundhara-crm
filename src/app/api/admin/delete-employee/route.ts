@@ -33,22 +33,64 @@ export async function POST(req: Request) {
     if (!targetSnap.exists) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
-    if (targetSnap.data()?.isGhost) {
+    const targetData = targetSnap.data();
+    if (targetData?.isGhost) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
 
-    // 1. Reassign clients if requested
-    if (reassignToUid) {
-      const clientsSnapshot = await adminDb.collection("clients").where("assignedTo", "==", targetUid).get();
-      if (!clientsSnapshot.empty) {
-        const batch = adminDb.batch();
-        clientsSnapshot.docs.forEach((doc) => {
-          batch.update(doc.ref, { 
-            assignedTo: reassignToUid,
-            updatedAt: Timestamp.now()
-          });
-        });
-        await batch.commit();
+    const targetFullName = targetData?.fullName || "Unknown";
+    const now = Timestamp.now();
+
+    // 1. Query ALL clients assigned to the target employee (including soft-deleted ones)
+    const clientsSnapshot = await adminDb
+      .collection("clients")
+      .where("assignedUserId", "==", targetUid)
+      .get();
+
+    if (!clientsSnapshot.empty) {
+      // Firestore batches max out at 500 operations — split into chunks
+      const chunks: FirebaseFirestore.DocumentReference[][] = [];
+      const docs = clientsSnapshot.docs;
+      for (let i = 0; i < docs.length; i += 250) {
+        chunks.push(docs.slice(i, i + 250).map((d) => d.ref));
+      }
+
+      if (reassignToUid) {
+        // Validate the reassignment target exists and is active
+        const reassignSnap = await adminDb.collection("users").doc(reassignToUid).get();
+        if (!reassignSnap.exists || reassignSnap.data()?.isGhost) {
+          return NextResponse.json({ error: "Reassignment target not found." }, { status: 404 });
+        }
+        const reassignName = reassignSnap.data()?.fullName || "Unknown";
+
+        // Reassign ALL leads (active AND soft-deleted) to the new owner
+        for (const chunk of chunks) {
+          const batch = adminDb.batch();
+          for (const ref of chunk) {
+            batch.update(ref, {
+              assignedUserId: reassignToUid,
+              assignedUserName: reassignName,
+              originalAssignedUserName: targetFullName,
+              isOrphan: false,
+              updatedAt: now,
+            });
+          }
+          await batch.commit();
+        }
+      } else {
+        // No reassignment — mark leads as orphaned
+        for (const chunk of chunks) {
+          const batch = adminDb.batch();
+          for (const ref of chunk) {
+            batch.update(ref, {
+              isOrphan: true,
+              orphanedAt: now,
+              originalAssignedUserName: targetFullName,
+              updatedAt: now,
+            });
+          }
+          await batch.commit();
+        }
       }
     }
 
@@ -64,8 +106,10 @@ export async function POST(req: Request) {
       performedBy: admin.uid,
       performedByName: admin.fullName,
       targetId: targetUid,
-      details: `Deleted employee ${targetUid}. Leads reassigned to: ${reassignToUid || "None (Orphaned)"}`,
-      timestamp: Timestamp.now(),
+      details: `Deleted employee ${targetFullName} (${targetUid}). Leads ${
+        reassignToUid ? `reassigned to ${reassignToUid}` : `orphaned (${clientsSnapshot?.size ?? 0} leads)`
+      }`,
+      timestamp: now,
       expireAt: Timestamp.fromDate(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)),
     });
 

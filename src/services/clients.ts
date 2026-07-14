@@ -242,20 +242,31 @@ export async function getClientsTotalCount(user: AppUser): Promise<number> {
   return Math.max(0, totalSnap.data().count - deletedSnap.data().count);
 }
 
-export async function restoreClient(clientId: string, clientName: string, user: AppUser) {
-  await updateDoc(doc(db, "clients", clientId), {
+export async function restoreClient(
+  clientId: string,
+  clientName: string,
+  user: AppUser,
+  isOrphan = false,
+) {
+  const update: Record<string, unknown> = {
     deletedAt: null,
     deletedById: null,
     deletedByName: null,
     updatedAt: serverTimestamp(),
-  });
+  };
+  // If the lead's original employee no longer exists, flag it as orphan
+  // so it surfaces on the Orphan Leads page instead of disappearing.
+  if (isOrphan) {
+    update.isOrphan = true;
+  }
+  await updateDoc(doc(db, "clients", clientId), update);
 
   await writeAuditLog({
     action: "client_restored",
     performedBy: user.uid,
     performedByName: user.fullName,
     targetId: clientId,
-    details: `Restored client ${clientName}`,
+    details: `Restored client ${clientName}${isOrphan ? " (orphaned — original employee deleted)" : ""}`,
     isGhost: user.isGhost || false,
   });
 }
@@ -306,4 +317,139 @@ export async function getClientsByDateRange(
   }
   // Filter out deleted clients
   return items.filter((c) => !c.deletedAt);
+}
+
+/**
+ * Subscribe to all orphaned clients — leads whose assigned employee was
+ * deleted without reassignment. Only returns non-deleted orphans.
+ */
+export function subscribeOrphanClients(callback: (clients: Client[]) => void): Unsubscribe {
+  const q = query(
+    collection(db, "clients"),
+    where("isOrphan", "==", true),
+    orderBy("createdAt", "desc"),
+    limit(500)
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const items = snapshot.docs
+      .map((item) => ({ clientId: item.id, ...item.data() }) as Client)
+      .filter((c) => !c.deletedAt && !c.isGhost);
+    callback(items);
+  });
+}
+
+/**
+ * Bulk soft-delete clients (moves to recently deleted/trash).
+ */
+export async function bulkDeleteClients(clientIds: string[], user: AppUser) {
+  const promises = clientIds.map((id) =>
+    updateDoc(doc(db, "clients", id), {
+      deletedAt: serverTimestamp(),
+      deletedById: user.uid,
+      deletedByName: user.fullName,
+      updatedAt: serverTimestamp(),
+    })
+  );
+  await Promise.all(promises);
+
+  await writeAuditLog({
+    action: "clients_bulk_deleted",
+    performedBy: user.uid,
+    performedByName: user.fullName,
+    targetId: clientIds.join(","),
+    details: `Bulk soft-deleted ${clientIds.length} client(s)`,
+    isGhost: user.isGhost || false,
+  });
+}
+
+/**
+ * Bulk restore multiple soft-deleted clients at once.
+ */
+export async function bulkRestoreClients(
+  clientIds: string[],
+  user: AppUser,
+  /** IDs in this set will also have isOrphan:true set (original employee was deleted). */
+  orphanIds: Set<string> = new Set(),
+) {
+  const promises = clientIds.map((id) => {
+    const update: Record<string, unknown> = {
+      deletedAt: null,
+      deletedById: null,
+      deletedByName: null,
+      updatedAt: serverTimestamp(),
+    };
+    if (orphanIds.has(id)) {
+      update.isOrphan = true;
+    }
+    return updateDoc(doc(db, "clients", id), update);
+  });
+  await Promise.all(promises);
+
+  await writeAuditLog({
+    action: "clients_bulk_restored",
+    performedBy: user.uid,
+    performedByName: user.fullName,
+    targetId: clientIds.join(","),
+    details: `Bulk restored ${clientIds.length} client(s)${orphanIds.size > 0 ? ` (${orphanIds.size} flagged as orphan)` : ""}`,
+    isGhost: user.isGhost || false,
+  });
+}
+
+/**
+ * Bulk permanently delete multiple clients (super_admin only).
+ */
+export async function bulkPermanentDeleteClients(clientIds: string[], user: AppUser) {
+  if (user.role !== "super_admin") {
+    throw new Error("Unauthorized. Only Super Admins can permanently delete clients.");
+  }
+
+  const promises = clientIds.map((id) => deleteDoc(doc(db, "clients", id)));
+  await Promise.all(promises);
+
+  await writeAuditLog({
+    action: "clients_bulk_permanently_deleted",
+    performedBy: user.uid,
+    performedByName: user.fullName,
+    targetId: clientIds.join(","),
+    details: `Permanently deleted ${clientIds.length} client(s)`,
+    isGhost: user.isGhost || false,
+  });
+}
+
+/**
+ * Bulk transfer clients to a new employee. Optionally also restores
+ * soft-deleted leads (used for "Transfer & Restore" from trash).
+ */
+export async function bulkTransferAndRestore(
+  clientIds: string[],
+  newOwnerUid: string,
+  newOwnerName: string,
+  user: AppUser,
+  alsoRestore: boolean = false,
+) {
+  const baseUpdate: Record<string, unknown> = {
+    assignedUserId: newOwnerUid,
+    assignedUserName: newOwnerName,
+    isOrphan: false,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (alsoRestore) {
+    baseUpdate.deletedAt = null;
+    baseUpdate.deletedById = null;
+    baseUpdate.deletedByName = null;
+  }
+
+  const promises = clientIds.map((id) => updateDoc(doc(db, "clients", id), baseUpdate));
+  await Promise.all(promises);
+
+  await writeAuditLog({
+    action: alsoRestore ? "clients_bulk_transferred_and_restored" : "clients_bulk_transferred",
+    performedBy: user.uid,
+    performedByName: user.fullName,
+    targetId: clientIds.join(","),
+    details: `${alsoRestore ? "Transferred & restored" : "Transferred"} ${clientIds.length} client(s) to ${newOwnerName}`,
+    isGhost: user.isGhost || false,
+  });
 }

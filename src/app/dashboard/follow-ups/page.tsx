@@ -205,12 +205,7 @@ function FollowUpRow({
       <div className="flex shrink-0 flex-wrap items-center gap-2">
         {/* Lead status */}
         <Badge
-          variant={
-            fu.status === "closed" ? "default"
-              : fu.status === "not_interested" ? "danger"
-                : fu.status === "negotiation" || fu.status === "site_visit_scheduled" ? "warning"
-                  : "secondary"
-          }
+          variant={fu.status as any}
           className="text-[10px]"
         >
           {leadStatusLabels[fu.status]}

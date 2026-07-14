@@ -27,10 +27,7 @@ import {
 import type { ClientFilters } from "@/hooks/useClients";
 
 function statusVariant(status: Client["leadStatus"]) {
-  if (status === "closed") return "default";
-  if (status === "not_interested") return "danger";
-  if (status === "negotiation" || status === "site_visit_scheduled") return "warning";
-  return "secondary";
+  return status as any;
 }
 
 type ClientTableProps = {
